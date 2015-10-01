@@ -66,6 +66,7 @@ import org.polymap.rap.openlayers.types.Coordinate;
 import org.polymap.rhei.batik.Context;
 import org.polymap.rhei.batik.DefaultPanel;
 import org.polymap.rhei.batik.PanelIdentifier;
+import org.polymap.rhei.batik.PanelPath;
 import org.polymap.rhei.batik.Scope;
 import org.polymap.rhei.batik.contribution.ContributionManager;
 import org.polymap.rhei.batik.dashboard.Dashboard;
@@ -77,8 +78,8 @@ import org.polymap.rhei.batik.toolkit.PriorityConstraint;
 
 import com.google.common.base.Joiner;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.LinearRing;
-import com.vividsolutions.jts.geom.MultiLineString;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
 
@@ -192,7 +193,12 @@ public class ResourceInfoPanel
                 org.geotools.data.ows.Layer layer = wms.getCapabilities().getLayerList().stream()
                         .filter( l -> layerName.equals( l.getName() ) )
                         .findFirst().get();
-                bounds = wms.getInfo( layer ).getBounds().transform( Geometries.crs( "EPSG:3857" ), false );
+                try {
+                    bounds = wms.getInfo( layer ).getBounds().transform( Geometries.crs( "EPSG:3857" ), false );
+                } catch(Exception e) {
+                    log.error( e.getMessage() );
+                    bounds = wms.getInfo( layer ).getBounds();
+                }
             }
             else if (service instanceof ShapefileDataStore) {
                 // TODO: this is just a dummy implementation
@@ -218,6 +224,9 @@ public class ResourceInfoPanel
                         if (geometry instanceof Polygon) {
                             feature.geometry.set( new PolygonGeometry( coords ) );
                         }
+//                        else if (geometry instanceof LineString) {
+//                            feature.geometry.set( new LineGeometry( coords ) );
+//                        }
                         else if (geometry instanceof Point) {
                             feature.geometry.set( new PointGeometry( coords.get( 0 ) ) );
                         }
