@@ -14,7 +14,6 @@
  */
 package org.polymap.p4.imports;
 
-import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,6 +22,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Button;
 import org.polymap.core.ui.UIUtils;
 import org.polymap.p4.imports.formats.FileDescription;
+import org.polymap.p4.imports.formats.ShapeFileDescription.ShpFileDescription;
 import org.polymap.p4.imports.formats.ShapeFileFormats;
 import org.polymap.p4.imports.utils.IssueReporter;
 import org.polymap.rhei.batik.toolkit.md.AbstractFeedbackComponent;
@@ -69,7 +69,7 @@ public class ShapeImportPanelUpdater
         boolean valid = new ShapeFileValidator().validateAll( files );
         if (valid) {
             List<FileDescription> shps = files.stream().flatMap( file -> file.getContainedFiles().stream() )
-                    .filter( cf -> cf.name.get().toLowerCase().endsWith( "." + ShapeFileFormats.SHP ) )
+                    .filter( cf -> cf.name.get().toLowerCase().endsWith( "." + ShapeFileFormats.SHP.getFileExtension() ) )
                     .collect( Collectors.toList() );
             if (shps.size() > 0) {
                 if (selectionListener != null) {
@@ -84,7 +84,7 @@ public class ShapeImportPanelUpdater
                     public void widgetSelected( SelectionEvent ev ) {
                         for (Object shp : shps) {
                             UIUtils.activateCallback( "importFiles" );
-                            shapeFileImporter.importFiles( (File)shp );
+                            shapeFileImporter.importFiles( ((ShpFileDescription)shp).file.get() );
                             UIUtils.deactivateCallback( "importFiles" );
                         }
                     }
