@@ -114,7 +114,7 @@ public class ProjectInfoPanel
                         @Override
                         public void widgetSelected( SelectionEvent e ) {
                             SimpleDialog dialog = site().toolkit().createSimpleDialog( "Titel!" );
-                            dialog.setContents( parent -> {} );
+                            dialog.setContents( p -> {} );
                             dialog.addAction( new Action( "OK" ) {
                                 @Override
                                 public void run() {
