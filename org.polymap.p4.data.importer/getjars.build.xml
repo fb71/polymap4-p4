@@ -45,23 +45,30 @@
 	</target>
 	
 	<target name="initRemoteMavenRepos" description="use real Maven repositories directly" unless="nexusURL">
-	    <!-- remote repositories as defined in copy.properties -->
 	    <artifact:remoteRepository id="central.repository" url="http://repo1.maven.org/maven2" />
 	</target>
 
 	<target name="initMavenRepos" description="init Maven repositories to use when downloading artifacts" 
 			depends="initNexus, initRemoteMavenRepos" />	
 
-	<target name="load_m2_deps" depends="init, initMavenRepos" unless="already_downloaded">
-	    <!-- remote repositories -->
+	<target name="load_m2_deps" depends="init, initMavenRepos">  <!-- unless="already_downloaded"-->
 	    <artifact:localRepository id="local.repository" path="${user.home}/.m2/repository" />
 
 		<artifact:dependencies filesetId="dependency.fileset" sourcesFilesetId="sources.dependency.fileset" versionsId="dependency.versions" useScope="runtime">
 			<localRepository refid="local.repository" />
-			<remoteRepository refid="central.repository" />
+            <!--remoteRepository refid="central.repository" />
+            <remoteRepository refid="topobyte.repository" />
+            <remoteRepository refid="gisgraphy.repository" /-->
 
-		    <dependency groupId="org.apache.commons" artifactId="commons-compress" version="1.9" />
-		    
+            <dependency groupId="org.apache.commons" artifactId="commons-compress" version="1.9" />
+
+            <!-- OSM Importer -->
+            <dependency groupId="de.topobyte" artifactId="osm4j-core" version="0.0.8" />
+            <dependency groupId="de.topobyte" artifactId="osm4j-xml" version="0.0.2" />
+
+            <!-- Protobuf, as used by OSM PBF Importer -->
+            <dependency groupId="com.google.protobuf" artifactId="protobuf-java" version="2.4.1"/>
+
             <!-- 
               All GeoTools jars are loaded by org.polymap.core.data. This is easier to maintain
               until we have a way to load *just* the needed jars in dependent plugins. 

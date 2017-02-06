@@ -57,6 +57,8 @@ import org.polymap.p4.data.importer.archive.ArchiveFileImporterFactory;
 import org.polymap.p4.data.importer.download.DownloadImporterFactory;
 import org.polymap.p4.data.importer.geojson.GeoJSONImporterFactory;
 import org.polymap.p4.data.importer.kml.KMLImporterFactory;
+import org.polymap.p4.data.importer.osm.OsmApiImporterFactory;
+import org.polymap.p4.data.importer.osm.OsmPbfFileImporterFactory;
 import org.polymap.p4.data.importer.raster.RasterImporterFactory;
 import org.polymap.p4.data.importer.refine.csv.CSVFileImporterFactory;
 import org.polymap.p4.data.importer.refine.excel.ExcelFileImporterFactory;
@@ -87,7 +89,9 @@ public class ImporterContext
             DownloadImporterFactory.class,
             WmsImporterFactory.class, 
             WfsImporterFactory.class,
-            RasterImporterFactory.class };
+            RasterImporterFactory.class,
+            OsmApiImporterFactory.class,
+            OsmPbfFileImporterFactory.class };
     
     private Importer                        importer;
     
