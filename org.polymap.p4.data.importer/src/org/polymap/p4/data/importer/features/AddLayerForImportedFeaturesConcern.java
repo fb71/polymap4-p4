@@ -14,9 +14,6 @@
  */
 package org.polymap.p4.data.importer.features;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
@@ -57,9 +54,6 @@ import org.polymap.p4.project.ProjectRepository;
  */
 public class AddLayerForImportedFeaturesConcern
         extends IOperationConcernFactory {
-
-    private static Log log = LogFactory.getLog( AddLayerForImportedFeaturesConcern.class );
-
 
     @Override
     public IUndoableOperation newInstance( IUndoableOperation op, OperationInfo info ) {
