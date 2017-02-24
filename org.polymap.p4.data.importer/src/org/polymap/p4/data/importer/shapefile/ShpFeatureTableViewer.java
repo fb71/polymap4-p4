@@ -20,9 +20,6 @@ import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.PropertyDescriptor;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import com.vividsolutions.jts.geom.Geometry;
 
 import org.eclipse.swt.SWT;
@@ -41,9 +38,6 @@ import org.polymap.rhei.table.LazyFeatureContentProvider;
  */
 public class ShpFeatureTableViewer
         extends FeatureTableViewer {
-
-    private static Log log = LogFactory.getLog( ShpFeatureTableViewer.class );
-    
 
     public ShpFeatureTableViewer( Composite parent, SimpleFeatureType schema ) {
         super( parent, /* SWT.VIRTUAL*/  SWT.H_SCROLL | SWT.V_SCROLL | SWT.FULL_SELECTION );
