@@ -16,12 +16,10 @@ package org.polymap.p4.layer;
 
 import static org.apache.commons.lang3.StringUtils.abbreviate;
 import static org.polymap.core.runtime.UIThreadExecutor.async;
+
 import org.geotools.data.FeatureStore;
 import org.opengis.feature.Feature;
 import org.opengis.feature.Property;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import com.vividsolutions.jts.geom.Geometry;
 
@@ -36,6 +34,7 @@ import org.polymap.core.ui.SelectionListenerAdapter;
 import org.polymap.core.ui.StatusDispatcher;
 
 import org.polymap.rhei.batik.PanelIdentifier;
+import org.polymap.rhei.batik.contribution.ContributionManager;
 import org.polymap.rhei.batik.toolkit.Snackbar.Appearance;
 import org.polymap.rhei.field.FormFieldEvent;
 import org.polymap.rhei.field.IFormFieldListener;
@@ -55,8 +54,6 @@ public class FeaturePanel
         extends P4Panel
         implements IFormFieldListener {
 
-    private static Log log = LogFactory.getLog( FeaturePanel.class );
-
     public static final PanelIdentifier ID = PanelIdentifier.parse( "feature" );
     
     private FeatureStore                fs;
@@ -71,10 +68,25 @@ public class FeaturePanel
 
     private boolean                     previouslyValid = true;
     
+
+    public FeatureStore fs() {
+        return fs;
+    }
     
+    public Feature feature() {
+        return feature;
+    }
+    
+    public UnitOfWork uow() {
+        return uow;
+    }
+
+
     @Override
     public void createContents( Composite parent ) {
         try {
+            parent.setLayout( ColumnLayoutFactory.defaults().columns( 1, 1 ).spacing( 8 ).margins( 5, 8 ).create() );
+            
             fs = featureLayer.get().featureSource(); 
             feature = featureLayer.get().clicked().get();
             
@@ -89,6 +101,8 @@ public class FeaturePanel
             fab.setToolTipText( "Save changes" );
             fab.setVisible( false );
             fab.addSelectionListener( new SelectionListenerAdapter( ev -> submit() ) );
+
+            ContributionManager.instance().contributeTo( parent, this, ID.id() );
         }
         catch (Exception e) {
             createErrorContents( parent, "Unable to display feature.", e );
