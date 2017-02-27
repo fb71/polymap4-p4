@@ -98,7 +98,7 @@ public class LayerStyleDashlet
         // default message
         parent.setLayout( FormLayoutFactory.defaults().margins( 10 ).create() );
         FormDataFactory.on( tk.createLabel( parent, 
-                "Connecting data source of this layer...<br/><br/>(WMS layers do not have an editble style)", SWT.WRAP ) )
+                "Connecting data source of this layer...<br/><br/>(WMS layers do not have an editable style)", SWT.WRAP ) )
                 .fill().noBottom().height( 55 );
         parent.layout( true, true );
 

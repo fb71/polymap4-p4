@@ -18,9 +18,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.Viewer;
 
@@ -39,8 +36,6 @@ import org.polymap.model2.Composite;
  */
 public class FeatureStyleContentProvider
         implements ITreeContentProvider {
-
-    private static Log log = LogFactory.getLog( FeatureStyleContentProvider.class );
 
     private FeatureStyle        input;
     

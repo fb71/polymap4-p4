@@ -23,10 +23,12 @@ import java.util.concurrent.ConcurrentMap;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.opengis.coverage.grid.GridCoverage;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+
 import org.polymap.core.data.pipeline.DataSourceDescription;
 import org.polymap.core.data.pipeline.PipelineIncubationException;
 import org.polymap.core.project.ILayer;
@@ -56,7 +58,7 @@ public class RasterLayer {
      * asynchronously.
      * <p/>
      * The callbacks are called from within an {@link UIJob}. Use
-     * {@link UIThreadExecutor} to do somethinf in the display thread.
+     * {@link UIThreadExecutor} to do something in the display thread.
      * <p/>
      * <b>Example usage:</b>
      * <pre>

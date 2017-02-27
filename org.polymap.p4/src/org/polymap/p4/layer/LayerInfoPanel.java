@@ -16,6 +16,7 @@ package org.polymap.p4.layer;
 
 import static org.polymap.core.runtime.UIThreadExecutor.asyncFast;
 import static org.polymap.core.runtime.event.TypeEventFilter.ifType;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -55,6 +56,7 @@ import org.polymap.rhei.batik.toolkit.Snackbar.Appearance;
 
 import org.polymap.p4.P4Panel;
 import org.polymap.p4.P4Plugin;
+import org.polymap.p4.process.ProcessDashlet;
 import org.polymap.p4.project.ProjectRepository;
 import org.polymap.p4.style.LayerStyleDashlet;
 
@@ -70,7 +72,7 @@ public class LayerInfoPanel
 
     public static final PanelIdentifier ID = PanelIdentifier.parse( "layer" );
     
-    public static final String          DASHBOARD_ID = "org.polymap.p4.project.layer";
+    public static final String          DASHBOARD_ID = "org.polymap.p4.layer";
     
     /** Memento key of the last expanded dashlet class name. */
     private static final String         MEMENTO_EXPANDED = "expanded";
@@ -107,6 +109,8 @@ public class LayerInfoPanel
                 .addConstraint( new PriorityConstraint( 100 ) ) );
         dashboard.addDashlet( new LayerStyleDashlet( site() )
                 .addConstraint( new PriorityConstraint( 10 ) ).setExpanded( false ) );
+        dashboard.addDashlet( new ProcessDashlet( site() )
+                .addConstraint( new PriorityConstraint( 9 ) ).setExpanded( false ) );
         dashboard.addDashlet( new DeleteLayerDashlet()
                 .addConstraint( new PriorityConstraint( 0 ) ).setExpanded( false ) );
         

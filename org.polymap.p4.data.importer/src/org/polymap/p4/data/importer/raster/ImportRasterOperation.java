@@ -63,7 +63,7 @@ public class ImportRasterOperation
     @Immutable
     public Config<GridCoverage2DReader> gridReader;
     
-    /** The newly created service. */
+    /** Outbound: The newly created service. */
     @Mandatory
     @Immutable
     public Config<GridServiceInfo>      gridService;     
