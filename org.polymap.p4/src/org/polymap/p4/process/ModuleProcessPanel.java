@@ -36,6 +36,7 @@ import org.eclipse.jface.layout.RowLayoutFactory;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 
 import org.polymap.core.data.process.FieldInfo;
@@ -97,6 +98,8 @@ public class ModuleProcessPanel
 
     private Composite               buttons;
     
+    private Button                  startBtn;
+
     private Composite               parent;
     
     private List<FieldViewer>       inputFields = new ArrayList();
@@ -188,32 +191,58 @@ public class ModuleProcessPanel
         Composite section = tk().createComposite( parent );
         section.setLayout( RowLayoutFactory.fillDefaults().spacing( 8 ).margins( 2, 2 ).fill( true ).justify( true ).create() );
         
-        Button startBtn = tk().createButton( section, "Run", SWT.PUSH );
-        //startBtn.setToolTipText( "Start processing data" );
+        startBtn = tk().createButton( section, "", SWT.PUSH );
         startBtn.setLayoutData( RowDataFactory.swtDefaults().hint( 150, SWT.DEFAULT ).create() );
-        startBtn.setImage( P4Plugin.images().svgImage( "play-circle-outline.svg", SvgImageRegistryHelper.WHITE24 ) );
-        startBtn.addSelectionListener( UIUtils.selectionListener( ev -> 
-                execute() ) );
+        startBtn.addSelectionListener( UIUtils.selectionListener( ev -> {
+            if (job == null) {
+                startProcess();
+            } else {
+                stopProcess();
+                //startBtn.setEnabled( false );
+            }
+        }));
+        updateStartBtn();
         return section;
     }
     
     
-    protected void execute() {
+    protected void updateStartBtn() {
+        if (job != null && job.getState() != Job.NONE) {
+            startBtn.setText( "STOP" );
+            startBtn.setImage( P4Plugin.images().svgImage( "stop-circle-outline.svg", SvgImageRegistryHelper.WHITE24 ) );
+        }
+        else {
+            startBtn.setText( "RUN" );
+            startBtn.setImage( P4Plugin.images().svgImage( "play-circle-outline.svg", SvgImageRegistryHelper.WHITE24 ) );
+        }
+    }
+    
+    
+    protected void stopProcess() {
+        if (job != null) {
+            module.pm.setCanceled( true );
+            job.cancelAndInterrupt();
+        }
+        updateStartBtn();
+        UIUtils.disposeChildren( outputSection.getBody() );
+        Label msg = new Label( outputSection.getBody(), SWT.NONE );
+        msg.setText( "Cancel requested..." );
+        parent.layout( true, true );
+    }
+    
+    
+    protected void startProcess() {
         if (outputSection == null) {
             outputSection = createOutputSection();
             FormDataFactory.on( outputSection.getControl() ).fill().top( buttons ).noBottom();
-            parent.layout( true );
         }
         else {
             UIUtils.disposeChildren( outputSection.getBody() );
-            outputSection.getControl().layout( true );
-        }
-        if (job != null) {
-            job.cancelAndInterrupt();
-            job = null;
         }
 
         module.pm = new ProcessProgressMonitor( outputSection.getBody() );
+        parent.layout( true, true );
+        
         job = new UIJob( ModuleProcessPanel.class.getSimpleName() ) {
             @Override
             protected void runWithException( IProgressMonitor monitor ) throws Exception {
@@ -223,23 +252,27 @@ public class ModuleProcessPanel
         job.addJobChangeListenerWithContext( new JobChangeAdapter() {
             @Override
             public void done( IJobChangeEvent ev ) {
-                job = null;
                 UIThreadExecutor.async( () -> {
                     if (!outputSection.getBody().isDisposed()) {
+                        job = null;
+                        updateStartBtn();
+                        
                         UIUtils.disposeChildren( outputSection.getBody() );
                         if (ev.getResult().isOK()) {
                             fillOutputFields();
                         }
                         else {
+                            Throwable e = ev.getResult().getException();
                             new Label( outputSection.getBody(), SWT.WRAP )
-                                    .setText( ev.getResult().getException().getMessage() );
+                                    .setText( e != null ? e.getMessage() : ev.getResult().getMessage() );
                         }
-                        outputSection.getControl().layout( true );
+                        parent.layout( true, true );
                     }
                 });
             }
         });
         job.schedule();
+        updateStartBtn();;
     }
 
 

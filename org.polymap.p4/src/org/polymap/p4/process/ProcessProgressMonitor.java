@@ -17,6 +17,7 @@ package org.polymap.p4.process;
 import org.jgrasstools.gears.libs.monitor.DummyProgressMonitor;
 import org.jgrasstools.gears.libs.monitor.IJGTProgressMonitor;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -68,6 +69,8 @@ public class ProcessProgressMonitor
 
         msg = new Label( parent, SWT.CENTER );
         msg.setLayoutData( FormDataFactory.filled().top( wheel, 10 ).create() );
+        
+        taskName = "Start processing";
         update( false );
     }
 
@@ -79,7 +82,8 @@ public class ProcessProgressMonitor
         updated.start();
         UIThreadExecutor.async( () -> {
             if (msg != null && !msg.isDisposed()) {
-                String s = Joiner.on( " " ).skipNulls().join( taskName, " ...", subTaskName );
+                String s = Joiner.on( " " ).skipNulls().join( 
+                        StringUtils.removeEnd( taskName, "..." ), " ...", subTaskName );
                 if (total != UNKNOWN) {
                     double percent = 100d / total * worked;
                     s += " (" + (int)percent + "%)";

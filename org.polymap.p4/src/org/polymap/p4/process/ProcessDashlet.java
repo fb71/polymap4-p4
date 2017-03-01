@@ -96,8 +96,8 @@ public class ProcessDashlet
         // default message
         parent.setLayout( FormLayoutFactory.defaults().margins( 8, 0 ).create() );
         FormDataFactory.on( tk.createLabel( parent, 
-                "Connecting data source of this layer...<br/><br/>(Vector processing is not supported yet)", SWT.WRAP ) )
-                .fill().noBottom().height( 55 );
+                "Connecting data source of this layer...<br/>(Feature/Vector processing is not supported yet)", SWT.WRAP ) )
+                .fill().noBottom().height( 45 );
         parent.layout( true, true );
 
         // RasterLayer?

@@ -115,8 +115,8 @@ public class LayerRasterConsumer
         text.setText( site.layer.get().label.get() + "-" + site.moduleInfo.get().title() ); // simpleClassname.get() );
         text.forceFocus();
         
-        FormDataFactory.on( text ).fill().noRight();
-        FormDataFactory.on( btn ).fill().left( text ).width( 80 );
+        FormDataFactory.on( text ).fill().right( 100, -80 );
+        FormDataFactory.on( btn ).fill().left( text );
     }
     
     
