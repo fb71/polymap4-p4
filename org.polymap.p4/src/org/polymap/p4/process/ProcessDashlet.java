@@ -14,8 +14,6 @@
  */
 package org.polymap.p4.process;
 
-import static org.apache.commons.lang3.StringUtils.capitalize;
-
 import org.jgrasstools.gears.libs.modules.JGTModel;
 import org.jgrasstools.hortonmachine.modules.demmanipulation.pitfiller.OmsPitfiller;
 import org.jgrasstools.hortonmachine.modules.demmanipulation.wateroutlet.OmsWateroutlet;
@@ -55,7 +53,7 @@ import org.polymap.p4.layer.RasterLayer;
 
 /**
  * Shows a list of available processing modules ({@link JGTModel}). Lets the user
- * choose one to process in {@link ProcessModulePanel}.
+ * choose one to process in {@link ModuleProcessPanel}.
  *
  * @author Falko Bräutigam
  */
@@ -128,7 +126,7 @@ public class ProcessDashlet
         // first line
         list.firstLineLabelProvider.set( FunctionalLabelProvider.of( cell -> {
             ModuleInfo info = ModuleInfo.of( (Class)cell.getElement() );
-            cell.setText( capitalize( info.name.get().orElse( info.simpleClassname.get() ) ) );            
+            cell.setText( info.title() );            
         }));
         // second line
         list.secondLineLabelProvider.set( FunctionalLabelProvider.of( cell -> {
@@ -150,7 +148,7 @@ public class ProcessDashlet
         });
         list.addOpenListener( ev -> {
             selected.set( (Class<JGTModel>)((IStructuredSelection)list.getSelection()).getFirstElement() );
-            BatikApplication.instance().getContext().openPanel( panelSite.path(), ProcessModulePanel.ID );
+            BatikApplication.instance().getContext().openPanel( panelSite.path(), ModuleProcessPanel.ID );
         });
         list.setContentProvider( new ListTreeContentProvider() );
         list.setInput( MODULES );

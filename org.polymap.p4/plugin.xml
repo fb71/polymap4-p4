@@ -83,7 +83,7 @@
             stackPriority="-1000">
       </panel>
       <panel
-            class="org.polymap.p4.process.ProcessModulePanel"
+            class="org.polymap.p4.process.ModuleProcessPanel"
             id="org.polymap.p4.ProcessModulePanel">
       </panel>
    </extension>
