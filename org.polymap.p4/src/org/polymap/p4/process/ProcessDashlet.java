@@ -15,9 +15,6 @@
 package org.polymap.p4.process;
 
 import org.jgrasstools.gears.libs.modules.JGTModel;
-import org.jgrasstools.hortonmachine.modules.demmanipulation.pitfiller.OmsPitfiller;
-import org.jgrasstools.hortonmachine.modules.demmanipulation.wateroutlet.OmsWateroutlet;
-import org.jgrasstools.hortonmachine.modules.geomorphology.aspect.OmsAspect;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,9 +23,12 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
 
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerCell;
+import org.eclipse.jface.viewers.ViewerComparator;
 
 import org.polymap.core.data.process.ModuleInfo;
+import org.polymap.core.data.process.Modules;
 import org.polymap.core.project.ILayer;
 import org.polymap.core.runtime.UIThreadExecutor;
 import org.polymap.core.ui.FormDataFactory;
@@ -68,7 +68,7 @@ public class ProcessDashlet
     
     /** Outbound: */
     @Scope( P4Plugin.Scope )
-    private Context<Class<JGTModel>> selected;
+    private Context<ModuleInfo>     selected;
     
     private PanelSite               panelSite;
 
@@ -120,17 +120,17 @@ public class ProcessDashlet
     
     
     protected void createModuleList( Composite parent ) {
-        Class[] MODULES = {OmsAspect.class, OmsWateroutlet.class, OmsPitfiller.class};
+        //Class[] MODULES = {OmsAspect.class, OmsWateroutlet.class, OmsPitfiller.class};
         
         list = tk.createListViewer( parent, SWT.SINGLE, SWT.FULL_SELECTION );
         // first line
         list.firstLineLabelProvider.set( FunctionalLabelProvider.of( cell -> {
-            ModuleInfo info = ModuleInfo.of( (Class)cell.getElement() );
+            ModuleInfo info = (ModuleInfo)cell.getElement();
             cell.setText( info.title() );            
         }));
         // second line
         list.secondLineLabelProvider.set( FunctionalLabelProvider.of( cell -> {
-            ModuleInfo info = ModuleInfo.of( (Class)cell.getElement() );
+            ModuleInfo info = (ModuleInfo)cell.getElement();
             cell.setText( info.description.get().orElse( "..." ) );            
         }));
         // icon
@@ -147,11 +147,17 @@ public class ProcessDashlet
             }
         });
         list.addOpenListener( ev -> {
-            selected.set( (Class<JGTModel>)((IStructuredSelection)list.getSelection()).getFirstElement() );
+            selected.set( (ModuleInfo)((IStructuredSelection)list.getSelection()).getFirstElement() );
             BatikApplication.instance().getContext().openPanel( panelSite.path(), ModuleProcessPanel.ID );
         });
         list.setContentProvider( new ListTreeContentProvider() );
-        list.setInput( MODULES );
+        list.setComparator( new ViewerComparator() {
+            @Override
+            public int compare( Viewer viewer, Object elm1, Object elm2 ) {
+                return ((ModuleInfo)elm1).title().compareTo( ((ModuleInfo)elm2).title() );
+            }
+        });
+        list.setInput( Modules.instance().rasterExecutables() );
     }
     
 }

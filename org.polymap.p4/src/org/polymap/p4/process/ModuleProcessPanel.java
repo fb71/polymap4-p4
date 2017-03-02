@@ -14,8 +14,6 @@
  */
 package org.polymap.p4.process;
 
-import static org.apache.commons.lang3.StringUtils.capitalize;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,6 +23,8 @@ import org.jgrasstools.gears.libs.monitor.IJGTProgressMonitor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import com.google.common.base.Throwables;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
@@ -86,10 +86,8 @@ public class ModuleProcessPanel
 
     /** Inbound: */
     @Scope( P4Plugin.Scope )
-    private Context<Class<JGTModel>> moduleType;
+    private Context<ModuleInfo>     moduleInfo;
 
-    private ModuleInfo              moduleInfo;
-    
     private JGTModel                module;
 
     private IPanelSection           outputSection;
@@ -110,12 +108,7 @@ public class ModuleProcessPanel
     @Override
     public void init() {
         super.init();
-        moduleInfo = ModuleInfo.of( moduleType.get() );
-        module = moduleInfo.createInstance();
-
-        for (FieldInfo info : moduleInfo.inputFields()) {
-            log.info( "Input field: " + info );
-        }
+        module = moduleInfo.get().createInstance();
     }
 
     
@@ -131,7 +124,7 @@ public class ModuleProcessPanel
     @Override
     public void createContents( @SuppressWarnings( "hiding" ) Composite parent ) {
         this.parent = parent;
-        site().title.set( capitalize( moduleInfo.name.get().orElse( moduleInfo.simpleClassname.get() ) ) );
+        site().title.set( moduleInfo.get().title() );
         
         parent.setLayout( FormLayoutFactory.defaults().spacing( 8 ).margins( 2, 8 ).create() );
         
@@ -150,12 +143,12 @@ public class ModuleProcessPanel
         IPanelSection section = tk().createPanelSection( parent, "Input", SWT.BORDER );
         section.getBody().setLayout( ColumnLayoutFactory.defaults().columns( 1, 1 ).margins( 0, 8 ).spacing( 10 ).create() );
 
-        Label label = tk().createLabel( section.getBody(), moduleInfo.description.get().orElse( "No description." ), SWT.WRAP );
+        Label label = tk().createLabel( section.getBody(), moduleInfo.get().description.get().orElse( "No description." ), SWT.WRAP );
         label.setLayoutData( ColumnDataFactory.defaults().widthHint( 300 ).create() );
         label.setEnabled( false );
         
         AtomicBoolean isFirst = new AtomicBoolean( true );
-        for (FieldInfo fieldInfo : moduleInfo.inputFields()) {
+        for (FieldInfo fieldInfo : moduleInfo.get().inputFields()) {
             // skip
             if (IJGTProgressMonitor.class.isAssignableFrom( fieldInfo.type.get() )
                     || !fieldInfo.description.get().isPresent()) {
@@ -168,7 +161,7 @@ public class ModuleProcessPanel
             }
             // field
             FieldViewer fieldViewer = new FieldViewer( new FieldViewerSite()
-                    .moduleInfo.put( moduleInfo )
+                    .moduleInfo.put( moduleInfo.get() )
                     .module.put( module )
                     .fieldInfo.put( fieldInfo )
                     .layer.put( layer.get() ) );
@@ -243,10 +236,10 @@ public class ModuleProcessPanel
         module.pm = new ProcessProgressMonitor( outputSection.getBody() );
         parent.layout( true, true );
         
-        job = new UIJob( ModuleProcessPanel.class.getSimpleName() ) {
+        job = new UIJob( "Processing" ) {
             @Override
             protected void runWithException( IProgressMonitor monitor ) throws Exception {
-                moduleInfo.execute( module, null );
+                moduleInfo.get().execute( module, null );
             }
         };
         job.addJobChangeListenerWithContext( new JobChangeAdapter() {
@@ -263,8 +256,9 @@ public class ModuleProcessPanel
                         }
                         else {
                             Throwable e = ev.getResult().getException();
-                            new Label( outputSection.getBody(), SWT.WRAP )
-                                    .setText( e != null ? e.getMessage() : ev.getResult().getMessage() );
+                            new Label( outputSection.getBody(), SWT.WRAP ).setText( e != null 
+                                    ? Throwables.getRootCause( e ).getMessage() 
+                                    : ev.getResult().getMessage() );
                         }
                         parent.layout( true, true );
                     }
@@ -272,7 +266,7 @@ public class ModuleProcessPanel
             }
         });
         job.schedule();
-        updateStartBtn();;
+        updateStartBtn();
     }
 
 
@@ -280,7 +274,7 @@ public class ModuleProcessPanel
         outputSection.getBody().setLayout( ColumnLayoutFactory.defaults().columns( 1, 1 ).margins( 0, 8 ).spacing( 10 ).create() );
 
         AtomicBoolean isFirst = new AtomicBoolean( true );
-        for (FieldInfo fieldInfo : moduleInfo.outputFields()) {
+        for (FieldInfo fieldInfo : moduleInfo.get().outputFields()) {
             // separator
             if (!isFirst.getAndSet( false )) {
                 Label sep = new Label( outputSection.getBody(), SWT.SEPARATOR|SWT.HORIZONTAL );
@@ -288,7 +282,7 @@ public class ModuleProcessPanel
             }
             // field
             FieldViewer fieldViewer = new FieldViewer( new FieldViewerSite()
-                    .moduleInfo.put( moduleInfo )
+                    .moduleInfo.put( moduleInfo.get() )
                     .module.put( module )
                     .fieldInfo.put( fieldInfo )
                     .layer.put( layer.get() ) );
