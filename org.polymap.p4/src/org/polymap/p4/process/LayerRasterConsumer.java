@@ -16,41 +16,60 @@ package org.polymap.p4.process;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import java.io.File;
 
 import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.jgrasstools.gears.io.rasterwriter.OmsRasterWriter;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.google.common.collect.Iterables;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
 import org.eclipse.jface.action.Action;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.jobs.IJobChangeEvent;
+import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 
 import org.polymap.core.catalog.IUpdateableMetadataCatalog.Updater;
-import org.polymap.core.catalog.resolve.IResolvableInfo;
+import org.polymap.core.catalog.resolve.IResourceInfo;
+import org.polymap.core.catalog.resolve.IServiceInfo;
 import org.polymap.core.data.process.ui.FieldViewerSite;
 import org.polymap.core.data.process.ui.OutputFieldConsumer;
 import org.polymap.core.data.raster.catalog.GridServiceResolver;
+import org.polymap.core.operation.OperationSupport;
 import org.polymap.core.project.ILayer;
+import org.polymap.core.project.IMap;
+import org.polymap.core.runtime.SubMonitor;
 import org.polymap.core.runtime.UIJob;
+import org.polymap.core.runtime.UIThreadExecutor;
+import org.polymap.core.style.DefaultStyle;
+import org.polymap.core.style.model.FeatureStyle;
 import org.polymap.core.ui.FormDataFactory;
 import org.polymap.core.ui.FormLayoutFactory;
 import org.polymap.core.ui.UIUtils;
 
+import org.polymap.rhei.batik.BatikApplication;
+import org.polymap.rhei.batik.Context;
+import org.polymap.rhei.batik.Mandatory;
+import org.polymap.rhei.batik.Scope;
+import org.polymap.rhei.batik.app.TextProgressMonitor;
 import org.polymap.rhei.batik.toolkit.SimpleDialog;
 
 import org.polymap.model2.query.Expressions;
 import org.polymap.p4.P4Plugin;
 import org.polymap.p4.catalog.AllResolver;
+import org.polymap.p4.layer.NewLayerOperation;
 import org.polymap.p4.project.ProjectRepository;
 
 /**
@@ -89,6 +108,8 @@ public class LayerRasterConsumer
         btn.setToolTipText( "Create a new layer with the given name" );
         btn.addSelectionListener( UIUtils.selectionListener( ev -> {
             consume();
+            btn.setEnabled( false );
+            btn.setToolTipText( "Layer has been created" );
         }));
         
         text = new Text( parent, SWT.BORDER );
@@ -121,52 +142,81 @@ public class LayerRasterConsumer
     
     
     public void consume() {
+        TextProgressMonitor monitor = new TextProgressMonitor();
+        SimpleDialog dialog = new SimpleDialog();
+
+        // job
         String layerName = text.getText();
         UIJob job = new UIJob( LayerRasterConsumer.class.getSimpleName() ) {
             @Override
-            protected void runWithException( IProgressMonitor monitor ) throws Exception {
-                execute( layerName,  monitor );
+            protected void runWithException( IProgressMonitor _monitor ) throws Exception {
+                execute( layerName, monitor );
             }
         };
-        job.schedule();
-        
-        SimpleDialog dialog = new SimpleDialog();
+        job.addJobChangeListenerWithContext( new JobChangeAdapter() {
+            @Override
+            public void done( IJobChangeEvent ev ) {
+                UIThreadExecutor.async( () -> {
+                    if (!dialog.getShell().isDisposed()) {
+                        dialog.close();
+                    }
+                });
+            }
+        });
+
+        // dialog
         dialog.title.put( "Creating new layer" );
         dialog.setContents( dialogParent -> {
-            new Label( dialogParent, SWT.NONE ).setText( "Running..." );
+            monitor.createContents( dialogParent );
+            job.schedule();
         });
         dialog.addAction( new Action( "STOP" ) {
             @Override
             public void run() {
+                monitor.setCanceled( true );
+                job.cancelAndInterrupt();
+                dialog.close();
             }
         });
-        dialog.open();        
+        dialog.setBlockOnOpen( false );
+        dialog.open();
     }
     
     
     protected void execute( String layerName, IProgressMonitor monitor ) throws Exception {
+        monitor.beginTask( "Create layer", IProgressMonitor.UNKNOWN );
         GridCoverage2D resultRaster = site.getFieldValue();
         log.info( "Result: " + resultRaster.toString() );
         
+        SubMonitor submon = new SubMonitor( monitor, 1, "Writing raster", IProgressMonitor.UNKNOWN );
         File targetDir = new File( P4Plugin.gridStoreDir(), layerName );
         File rasterFile = new File( targetDir, layerName + ".tiff" );
         targetDir.mkdirs();
         log.info( "Raster file: " + rasterFile.getAbsolutePath() );
         
         OmsRasterWriter writer = new OmsRasterWriter();
-        //writer.pm = pm;
+        //writer.pm = new ProcessProgressMonitor( )
         writer.inRaster = resultRaster;
         writer.file = rasterFile.getAbsolutePath();  
         writer.process();
+        submon.done();
         
-        createCatalogEntry( rasterFile, monitor );
+        submon = new SubMonitor( monitor, 1 );
+        IServiceInfo service = createCatalogEntry( rasterFile, submon );
+        submon.done();
+
+        submon = new SubMonitor( monitor, 1 );
+        createLayer( layerName, service, submon );
+        submon.done();
     }
     
     
-    protected void createCatalogEntry( File rasterFile, IProgressMonitor monitor ) throws Exception {
+    protected IServiceInfo createCatalogEntry( File rasterFile, IProgressMonitor monitor ) throws Exception {
+        monitor.beginTask( "new catalog entry", 1 );
         try (
             Updater update = P4Plugin.localCatalog().prepareUpdate()
         ){
+            AtomicReference<IServiceInfo> service = new AtomicReference();
             update.newEntry( metadata -> {
                 metadata.setTitle( FilenameUtils.getBaseName( rasterFile.getName() ) );
                 
@@ -182,15 +232,43 @@ public class LayerRasterConsumer
                 metadata.setConnectionParams( GridServiceResolver.createParams( url ) );
                 
                 try {
-                    IResolvableInfo resolvable = AllResolver.instance().resolve( metadata, monitor );
-                    log.info( "Resolved: " + resolvable) ;
+                    service.set( (IServiceInfo)AllResolver.instance().resolve( metadata, monitor ) );
+                    log.info( "Resolved: " + service.get()) ;
                 }
                 catch (Exception e) {
                     throw new RuntimeException( e );
                 }
             });
             update.commit();
+            return service.get();
         }
     }
+
+    
+    protected void createLayer( String layerName, IServiceInfo service, IProgressMonitor monitor ) throws Exception {
+        monitor.beginTask( "new layer", 2 );
+        GridCoverage2DReader reader = service.createService( monitor );
+        IResourceInfo res = Iterables.getOnlyElement( service.getResources( monitor ) );
+        GridCoverage2D grid = reader.read( res.getName(), null );
+        
+        FeatureStyle featureStyle = P4Plugin.styleRepo().newFeatureStyle();
+        DefaultStyle.fillGrayscaleStyle( featureStyle, grid );
+        monitor.worked( 1 );
+
+        BatikApplication.instance().getContext().propagate( this );
+        NewLayerOperation op = new NewLayerOperation()
+                .label.put( layerName )
+                .res.put( res )
+                .featureStyle.put( featureStyle )
+                .uow.put( ProjectRepository.unitOfWork() )
+                .map.put( map.get() );
+
+        OperationSupport.instance().execute( op, false, false );
+        monitor.worked( 1 );
+    }
+    
+    @Mandatory
+    @Scope(P4Plugin.Scope)
+    protected Context<IMap>         map;
 
 }
