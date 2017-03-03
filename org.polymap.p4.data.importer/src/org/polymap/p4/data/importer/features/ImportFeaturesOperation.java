@@ -34,10 +34,12 @@ import org.polymap.core.data.rs.catalog.RServiceInfo;
 import org.polymap.core.operation.DefaultOperation;
 
 import org.polymap.p4.P4Plugin;
+import org.polymap.p4.catalog.LocalCatalog;
 import org.polymap.p4.data.importer.ImporterContext;
 
 /**
- * 
+ * Copies given {@link #features()} into the
+ * {@link LocalCatalog#localFeaturesStore()}.
  *
  * @author <a href="http://www.polymap.de">Falko Bräutigam</a>
  */
