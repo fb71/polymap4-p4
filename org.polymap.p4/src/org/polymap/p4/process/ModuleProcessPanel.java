@@ -256,9 +256,12 @@ public class ModuleProcessPanel
                         }
                         else {
                             Throwable e = ev.getResult().getException();
-                            new Label( outputSection.getBody(), SWT.WRAP ).setText( e != null 
+                            Label msg = new Label( outputSection.getBody(), SWT.WRAP );
+                            msg.setForeground( FieldViewer.errorColor() );
+                            msg.setText( e != null 
                                     ? Throwables.getRootCause( e ).getMessage() 
                                     : ev.getResult().getMessage() );
+                            FormDataFactory.on( msg ).fill().width( 200 );
                         }
                         parent.layout( true, true );
                     }

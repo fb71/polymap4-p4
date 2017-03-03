@@ -26,6 +26,7 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerCell;
 import org.eclipse.jface.viewers.ViewerComparator;
+import org.eclipse.jface.viewers.ViewerFilter;
 
 import org.polymap.core.data.process.ModuleInfo;
 import org.polymap.core.data.process.Modules;
@@ -36,12 +37,17 @@ import org.polymap.core.ui.FormLayoutFactory;
 import org.polymap.core.ui.UIUtils;
 
 import org.polymap.rhei.batik.BatikApplication;
+import org.polymap.rhei.batik.BatikPlugin;
 import org.polymap.rhei.batik.Context;
 import org.polymap.rhei.batik.PanelSite;
 import org.polymap.rhei.batik.Scope;
 import org.polymap.rhei.batik.app.SvgImageRegistryHelper;
 import org.polymap.rhei.batik.dashboard.DashletSite;
 import org.polymap.rhei.batik.dashboard.DefaultDashlet;
+import org.polymap.rhei.batik.toolkit.ActionText;
+import org.polymap.rhei.batik.toolkit.ClearTextAction;
+import org.polymap.rhei.batik.toolkit.TextActionItem;
+import org.polymap.rhei.batik.toolkit.TextActionItem.Type;
 import org.polymap.rhei.batik.toolkit.md.ActionProvider;
 import org.polymap.rhei.batik.toolkit.md.FunctionalLabelProvider;
 import org.polymap.rhei.batik.toolkit.md.ListTreeContentProvider;
@@ -75,6 +81,8 @@ public class ProcessDashlet
     private MdToolkit               tk;
 
     private MdListViewer            list;
+
+    private ActionText searchText;
     
     
     public ProcessDashlet( PanelSite panelSite ) {
@@ -94,7 +102,7 @@ public class ProcessDashlet
     @Override
     public void createContents( Composite parent ) {
         // default message
-        parent.setLayout( FormLayoutFactory.defaults().margins( 8, 0 ).create() );
+        parent.setLayout( FormLayoutFactory.defaults().margins( 8, 0 ).spacing( 0 ).create() );
         FormDataFactory.on( tk.createLabel( parent, 
                 "Connecting data source of this layer...<br/>(Feature/Vector processing is not supported yet)", SWT.WRAP ) )
                 .fill().noBottom().height( 45 );
@@ -105,8 +113,11 @@ public class ProcessDashlet
             UIThreadExecutor.async( () -> {
                 if (rl.isPresent()) {
                     UIUtils.disposeChildren( parent );
+                    createSearchText( parent );
                     createModuleList( parent );
-                    FormDataFactory.on( list.getControl() ).fill().height( 400 );
+                    
+                    FormDataFactory.on( searchText.getControl() ).fill().noBottom();
+                    FormDataFactory.on( list.getControl() ).fill().top( searchText.getControl() ).height( 400 );
                 }
                 parent.getParent().getParent().layout( true, true );
             });
@@ -119,9 +130,37 @@ public class ProcessDashlet
     }
     
     
+    protected void createSearchText( Composite parent ) {
+        searchText = tk.createActionText( parent, "" )
+                .performOnEnter.put( false );
+        new TextActionItem( searchText, Type.DEFAULT )
+                .action.put( ev -> filterList( searchText.getTextText() ) )
+                .text.put( "Search..." )
+                .tooltip.put( "Search in name and description of the modules" )
+                .icon.put( BatikPlugin.images().svgImage( "magnify.svg", SvgImageRegistryHelper.DISABLED12 ) );
+        new ClearTextAction( searchText );
+        //searchText.getText().forceFocus();
+    }
+
+    
+    protected void filterList( String pattern ) {
+        log.info( "Pattern: " + pattern );
+
+        ViewerFilter filter = new ViewerFilter() {
+            @Override
+            public boolean select( Viewer viewer, Object parent, Object elm ) {
+                ModuleInfo info = (ModuleInfo)elm;
+                return info.name.get().map( v -> v.startsWith( pattern ) ).orElse( false )
+                        || info.label.get().map( v -> v.startsWith( pattern ) ).orElse( false )
+                        || info.description.get().map( v -> v.contains( pattern ) ).orElse( false );
+            }
+        };
+        list.setFilters( new ViewerFilter[] {filter} );
+        //list.refresh();
+    }
+
+    
     protected void createModuleList( Composite parent ) {
-        //Class[] MODULES = {OmsAspect.class, OmsWateroutlet.class, OmsPitfiller.class};
-        
         list = tk.createListViewer( parent, SWT.SINGLE, SWT.FULL_SELECTION );
         // first line
         list.firstLineLabelProvider.set( FunctionalLabelProvider.of( cell -> {
