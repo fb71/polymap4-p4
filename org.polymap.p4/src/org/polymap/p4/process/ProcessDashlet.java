@@ -144,8 +144,6 @@ public class ProcessDashlet
 
     
     protected void filterList( String pattern ) {
-        log.info( "Pattern: " + pattern );
-
         ViewerFilter filter = new ViewerFilter() {
             @Override
             public boolean select( Viewer viewer, Object parent, Object elm ) {
