@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.geotools.data.DataStore;
+import org.geotools.data.FeatureSource;
 import org.opengis.feature.Feature;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
@@ -29,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+
 import org.polymap.core.data.DataPlugin;
 import org.polymap.core.data.PipelineFeatureSource;
 import org.polymap.core.data.feature.FeaturesProducer;
@@ -79,7 +81,7 @@ public class FeatureLayer {
      * asynchronously.
      * <p/>
      * The callbacks are called from within an {@link UIJob}. Use
-     * {@link UIThreadExecutor} to do somethinf in the display thread.
+     * {@link UIThreadExecutor} to update the UI.
      * <p/>
      * <b>Example usage:</b>
      * <pre>
@@ -112,7 +114,7 @@ public class FeatureLayer {
                 }
             });
             return result.isValid() ? Optional.of( result ) : Optional.empty();
-        }, JobExecutor.instance() );
+        }, JobExecutor.withProgress() );
     }
     
 

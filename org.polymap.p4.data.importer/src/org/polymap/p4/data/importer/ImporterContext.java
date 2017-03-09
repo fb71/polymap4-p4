@@ -233,14 +233,14 @@ public class ImporterContext
      */
     public List<ImporterContext> findNext( IProgressMonitor monitor ) throws Exception {
         List<ImporterExtension> exts = ImporterExtension.all();
-        monitor.beginTask( "Check importers", exts.size()*10 );
+        monitor.beginTask( "Checking data", exts.size()*10 );
         
         List<ImporterContext> result = new ArrayList();
         
         for (ImporterExtension ext : exts) {
             ImporterFactory factory = ext.createFactory();
             injectContextIn( factory, contextOut );
-            SubProgressMonitor submon = new SubProgressMonitor( monitor, 10 );
+            SubProgressMonitor submon = new SubMonitor( monitor, 10, factory.getClass().getSimpleName(), IProgressMonitor.UNKNOWN );
 
             factory.createImporters( new ImporterBuilder() {
                 @Override
@@ -250,6 +250,7 @@ public class ImporterContext
             });
             submon.done();
         }
+        monitor.done();
         return result;
     }
 

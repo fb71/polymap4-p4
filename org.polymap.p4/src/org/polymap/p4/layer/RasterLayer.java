@@ -81,7 +81,7 @@ public class RasterLayer {
     public static CompletableFuture<Optional<RasterLayer>> of( ILayer layer ) {
         return CompletableFuture.supplyAsync( () -> {
             SessionHolder session = SessionHolder.instance( SessionHolder.class );
-            RasterLayer result = session.instances.computeIfAbsent( (String)layer.id(), key -> { 
+            RasterLayer result = session.instances.computeIfAbsent( (String)layer.id(), key -> {
                 try {
                     IProgressMonitor monitor = UIJob.monitorOfThread();
                     return new RasterLayer( layer ).doConnectLayer( monitor );
@@ -91,7 +91,7 @@ public class RasterLayer {
                 }
             });
             return result.isValid() ? Optional.of( result ) : Optional.empty();
-        }, JobExecutor.instance() );
+        }, JobExecutor.withProgress() );
     }
     
 

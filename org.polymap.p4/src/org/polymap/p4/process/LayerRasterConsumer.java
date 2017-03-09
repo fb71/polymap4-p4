@@ -35,11 +35,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 
-import org.eclipse.jface.action.Action;
-
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.jobs.IJobChangeEvent;
-import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 
 import org.polymap.core.catalog.IUpdateableMetadataCatalog.Updater;
 import org.polymap.core.catalog.resolve.IResourceInfo;
@@ -52,7 +48,6 @@ import org.polymap.core.project.ILayer;
 import org.polymap.core.project.IMap;
 import org.polymap.core.runtime.SubMonitor;
 import org.polymap.core.runtime.UIJob;
-import org.polymap.core.runtime.UIThreadExecutor;
 import org.polymap.core.style.DefaultStyle;
 import org.polymap.core.style.model.FeatureStyle;
 import org.polymap.core.ui.FormDataFactory;
@@ -63,8 +58,6 @@ import org.polymap.rhei.batik.BatikApplication;
 import org.polymap.rhei.batik.Context;
 import org.polymap.rhei.batik.Mandatory;
 import org.polymap.rhei.batik.Scope;
-import org.polymap.rhei.batik.app.TextProgressMonitor;
-import org.polymap.rhei.batik.toolkit.SimpleDialog;
 
 import org.polymap.model2.query.Expressions;
 import org.polymap.p4.P4Plugin;
@@ -142,44 +135,10 @@ public class LayerRasterConsumer
     
     
     public void consume() {
-        TextProgressMonitor monitor = new TextProgressMonitor();
-        SimpleDialog dialog = new SimpleDialog();
-
-        // job
         String layerName = text.getText();
-        UIJob job = new UIJob( LayerRasterConsumer.class.getSimpleName() ) {
-            @Override
-            protected void runWithException( IProgressMonitor _monitor ) throws Exception {
-                execute( layerName, monitor );
-            }
-        };
-        job.addJobChangeListenerWithContext( new JobChangeAdapter() {
-            @Override
-            public void done( IJobChangeEvent ev ) {
-                UIThreadExecutor.async( () -> {
-                    if (!dialog.getShell().isDisposed()) {
-                        dialog.close();
-                    }
-                });
-            }
+        UIJob.schedule( "Create layer", monitor -> {
+            execute( layerName, monitor );
         });
-
-        // dialog
-        dialog.title.put( "Creating new layer" );
-        dialog.setContents( dialogParent -> {
-            monitor.createContents( dialogParent );
-            job.schedule();
-        });
-        dialog.addAction( new Action( "STOP" ) {
-            @Override
-            public void run() {
-                monitor.setCanceled( true );
-                job.cancelAndInterrupt();
-                dialog.close();
-            }
-        });
-        dialog.setBlockOnOpen( false );
-        dialog.open();
     }
     
     

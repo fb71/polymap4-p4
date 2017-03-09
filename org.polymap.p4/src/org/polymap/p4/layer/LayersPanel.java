@@ -14,7 +14,6 @@
  */
 package org.polymap.p4.layer;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.polymap.core.project.ui.ProjectNodeLabelProvider.PropType.Label;
 import static org.polymap.core.runtime.event.TypeEventFilter.ifType;
 import static org.polymap.core.ui.UIUtils.selectionListener;
@@ -23,9 +22,6 @@ import static org.polymap.rhei.batik.app.SvgImageRegistryHelper.NORMAL24;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import org.opengis.feature.simple.SimpleFeatureType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -284,20 +280,20 @@ public class LayersPanel
 
         @Override
         protected boolean initSelection( MdListViewer _viewer, Object elm ) {
-            try {
-                // check: feature layer without geom
-                Optional<FeatureLayer> fl = FeatureLayer.of( (ILayer)elm ).get( 3, SECONDS );
-                if (fl.isPresent()) {
-                    SimpleFeatureType schema = fl.get().featureSource().getSchema();
-                    if (schema.getGeometryDescriptor() == null) {
-                        return false;
-                    }
-                }
-            }
-            catch (Exception e) {
-                log.warn( "", e );
-                return false;
-            }
+//            try {
+//                // check: feature layer without geom
+//                Optional<FeatureLayer> fl = FeatureLayer.of( (ILayer)elm ).get( 3, SECONDS );
+//                if (fl.isPresent()) {
+//                    SimpleFeatureType schema = fl.get().featureSource().getSchema();
+//                    if (schema.getGeometryDescriptor() == null) {
+//                        return false;
+//                    }
+//                }
+//            }
+//            catch (Exception e) {
+//                log.warn( "", e );
+//                return false;
+//            }
             
             return ((ILayer)elm).userSettings.get().visible.get();
         }
@@ -306,6 +302,7 @@ public class LayersPanel
         public void perform( MdListViewer _viewer, Object elm ) {
             FeatureLayer.of( (ILayer)elm ).thenAccept( fl -> {
                 if (fl.isPresent()) {
+                    // check: feature layer without geom
                     if (fl.get().featureSource().getSchema().getGeometryDescriptor() != null) {
                         UIThreadExecutor.async( () -> super.perform( _viewer, elm ) );
                         return;
@@ -374,10 +371,11 @@ public class LayersPanel
                 cell.setImage( null );
                 
                 ILayer layer = (ILayer)cell.getElement();            
-                Optional<FeatureLayer> fl = FeatureLayer.of( layer ).get( 5, SECONDS );
-                if (fl.isPresent()) {
-                    super.update( cell );
-                }
+                FeatureLayer.of( layer ).thenAccept( fl -> {
+                    if (fl.isPresent()) {
+                        UIThreadExecutor.async( () -> super.update( cell ) );
+                    }
+                });
             }
             catch (Exception e) {
                 log.warn( "", e );

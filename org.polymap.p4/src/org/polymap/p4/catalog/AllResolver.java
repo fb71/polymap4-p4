@@ -40,6 +40,7 @@ import org.polymap.core.catalog.resolve.ResourceResolverExtension;
 import org.polymap.core.data.pipeline.DataSourceDescription;
 import org.polymap.core.project.ILayer;
 import org.polymap.core.runtime.JobExecutor;
+import org.polymap.core.runtime.SubMonitor;
 import org.polymap.core.runtime.UIJob;
 import org.polymap.core.runtime.cache.Cache;
 import org.polymap.core.runtime.cache.CacheConfig;
@@ -135,11 +136,13 @@ public class AllResolver
      * @throws Exception
      */
     public Optional<DataSourceDescription> connectLayer( ILayer layer, IProgressMonitor monitor ) throws Exception {
-        IServiceInfo serviceInfo = serviceInfo( layer, monitor ).orElse( null );
+        monitor.beginTask( "Connect layer \"" + layer.label.get() + "\"", 10 );
+        IServiceInfo serviceInfo = serviceInfo( layer, SubMonitor.on( monitor, 5 ) ).orElse( null );
         
         if (serviceInfo != null) {
             String resName = parseResourceIdentifier( layer.resourceIdentifier.get() )[1];
-            Object service = serviceInfo.createService( monitor );
+            Object service = serviceInfo.createService( SubMonitor.on( monitor, 5 ) );
+            monitor.done();
             
             return Optional.of( new DataSourceDescription()
                     .service.put( service )
@@ -150,40 +153,61 @@ public class AllResolver
     
 
     public Optional<IMetadata> metadata( ILayer layer, IProgressMonitor monitor ) throws Exception {
-        String metadataId = parseResourceIdentifier( layer.resourceIdentifier.get() )[0];
-        
-        return Optional.ofNullable( metadataCache.get( metadataId, key -> {
-            for (IMetadataCatalog catalog : catalogs) {
-                Optional<? extends IMetadata> result = catalog.entry( metadataId, monitor );
-                if (result.isPresent()) {
-                    return result.get();
+        try {
+            String metadataId = parseResourceIdentifier( layer.resourceIdentifier.get() )[0];
+            
+            return Optional.ofNullable( metadataCache.get( metadataId, key -> {
+                monitor.beginTask( "Metadata", catalogs.size() );
+                for (IMetadataCatalog catalog : catalogs) {
+                    Optional<? extends IMetadata> result = catalog.entry( metadataId, monitor );
+                    if (result.isPresent()) {
+                        return result.get();
+                    }
+                    monitor.worked( 1 );
                 }
-            }
-            return null;
-        }));
+                return null;
+            }));
+        }
+        finally {
+            monitor.done();
+        }
     }
     
     
     public Optional<IServiceInfo> serviceInfo( ILayer layer, IProgressMonitor monitor ) throws Exception {
-        IMetadata metadata = metadata( layer, monitor ).orElse( null );
+        try {
+            monitor.beginTask( "Service", 10 );
+            IMetadata metadata = metadata( layer, SubMonitor.on( monitor, 5 ) ).orElse( null );
 
-        return Optional.ofNullable( metadata != null
-                ? (IServiceInfo)resolve( metadata, monitor ) : null ); 
+            return Optional.ofNullable( metadata != null
+                    ? (IServiceInfo)resolve( metadata, SubMonitor.on( monitor, 5 ) ) : null );
+        }
+        finally {
+            monitor.done();
+        } 
     }
     
     
     public Optional<IResourceInfo> resInfo( ILayer layer, IProgressMonitor monitor ) throws Exception {
-        IServiceInfo serviceInfo = serviceInfo( layer, monitor ).orElse( null );
-        
-        if (serviceInfo != null) {
-            String resName = parseResourceIdentifier( layer.resourceIdentifier.get() )[1];
-            for (IResourceInfo info : serviceInfo.getResources( monitor )) {
-                if (info.getName().equals( resName )) {
-                    return Optional.of( info );
+        try {
+            monitor.beginTask( "Resource", 10 );
+            IServiceInfo serviceInfo = serviceInfo( layer, SubMonitor.on( monitor, 5 ) ).orElse( null );
+            
+            if (serviceInfo != null) {
+                String resName = parseResourceIdentifier( layer.resourceIdentifier.get() )[1];
+                SubMonitor submon = SubMonitor.on( monitor, 5 );
+                submon.beginTask( "Resources", IProgressMonitor.UNKNOWN );
+                for (IResourceInfo info : serviceInfo.getResources( submon )) {
+                    if (info.getName().equals( resName )) {
+                        return Optional.of( info );
+                    }
                 }
             }
+            return Optional.empty();
         }
-        return Optional.empty();        
+        finally {
+            monitor.done();
+        }        
     }
 
   
@@ -215,19 +239,21 @@ public class AllResolver
     
     
     protected CompletableFuture<IResolvableInfo> doResolve( IMetadata metadata, IProgressMonitor monitor ) {
+        monitor.beginTask( "Resolve", resolvers.size() );
         for (IMetadataResourceResolver resolver : resolvers) {
             if (resolver.canResolve( metadata ) ) {
                 return CompletableFuture.supplyAsync( () -> {
                     try {
-                        IProgressMonitor mon = monitor != null ? monitor : UIJob.monitorOfThread();
+                        IProgressMonitor mon = /*monitor != null ? monitor :*/ UIJob.monitorOfThread();
                         return resolver.resolve( metadata, mon );
                     }
                     catch (Exception e) {
                         log.warn( "", e );
                         throw Throwables.propagate( e );
                     }
-                }, JobExecutor.instance() );
-            }            
+                }, JobExecutor.withProgress() );
+            }
+            monitor.worked( 1 );
         }
         throw new IllegalStateException( "Unable to resolve: " + metadata );
     }

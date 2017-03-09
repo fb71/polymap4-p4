@@ -25,10 +25,10 @@ import com.google.common.base.Joiner;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 
 import org.polymap.core.runtime.Timer;
-import org.polymap.core.runtime.UIThreadExecutor;
 import org.polymap.core.ui.FormDataFactory;
 import org.polymap.core.ui.FormLayoutFactory;
 
@@ -51,16 +51,20 @@ public class ProcessProgressMonitor
 
     private String          subTaskName;
 
-    private int             total = UNKNOWN;
+    private volatile int    total = UNKNOWN;
 
-    private int             worked;
+    private volatile int    worked;
     
     private Timer           updated = new Timer();
     
-    private boolean         canceled;
+    private volatile boolean canceled;
+
+    private Display         display;
     
     
     public ProcessProgressMonitor( Composite parent ) {
+        this.display = parent.getDisplay();
+        
         parent.setLayout( FormLayoutFactory.defaults().margins( 0, 30 ).create() );
         Label wheel = new Label( parent, SWT.CENTER );
         wheel.setLayoutData( FormDataFactory.filled().noBottom().create() );
@@ -80,7 +84,7 @@ public class ProcessProgressMonitor
             return;
         }
         updated.start();
-        UIThreadExecutor.async( () -> {
+        display.asyncExec( () -> {
             if (msg != null && !msg.isDisposed()) {
                 String s = Joiner.on( " " ).skipNulls().join( 
                         StringUtils.removeEnd( taskName, "..." ), " ...", subTaskName );
@@ -97,6 +101,12 @@ public class ProcessProgressMonitor
     public boolean isCanceled() {
         return canceled;
     }
+
+    @Override
+    public void setCanceled( boolean canceled ) {
+        this.canceled = canceled;
+    }
+
 
     @Override
     public void beginTask( String name, int totalWork ) {
