@@ -14,6 +14,8 @@
  */
 package org.polymap.p4.process;
 
+import static org.apache.commons.lang3.StringUtils.defaultString;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -233,6 +235,9 @@ public class ModuleProcessPanel
             UIUtils.disposeChildren( outputSection.getBody() );
         }
 
+        // the default Polymap executor is unbound
+       // ExecutionPlanner.defaultExecutor = Polymap.executorService();
+        
         module.pm = new ProcessProgressMonitor( outputSection.getBody() );
         parent.layout( true, true );
         
@@ -258,9 +263,10 @@ public class ModuleProcessPanel
                             Throwable e = ev.getResult().getException();
                             Label msg = new Label( outputSection.getBody(), SWT.WRAP );
                             msg.setForeground( FieldViewer.errorColor() );
-                            msg.setText( e != null 
+                            msg.setText( defaultString( e != null 
                                     ? Throwables.getRootCause( e ).getMessage() 
-                                    : ev.getResult().getMessage() );
+                                    : ev.getResult().getMessage(),
+                                    "-" ) );
                             FormDataFactory.on( msg ).fill().width( 200 );
                         }
                         parent.layout( true, true );

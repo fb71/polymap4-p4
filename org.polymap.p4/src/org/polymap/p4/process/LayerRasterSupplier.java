@@ -23,19 +23,25 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.jface.viewers.ViewerComparator;
 
 import org.polymap.core.data.process.ui.FieldViewerSite;
 import org.polymap.core.data.process.ui.InputFieldSupplier;
 import org.polymap.core.project.ILayer;
 import org.polymap.core.project.IMap;
+import org.polymap.core.ui.FormDataFactory;
+import org.polymap.core.ui.FormLayoutFactory;
 import org.polymap.core.ui.SelectionAdapter;
 import org.polymap.core.ui.StatusDispatcher;
+import org.polymap.core.ui.UIUtils;
 
 import org.polymap.model2.runtime.UnitOfWork;
 import org.polymap.p4.layer.RasterLayer;
@@ -73,8 +79,25 @@ public class LayerRasterSupplier
         UnitOfWork uow = ProjectRepository.unitOfWork();
         IMap rootMap = uow.entity( IMap.class, ProjectRepository.ROOT_MAP_ID );
         layers = rootMap.layers.stream().collect( Collectors.toList() );
+
+        parent.setLayout( FormLayoutFactory.defaults().spacing( 3 ).create() );
+        
+        Button check = new Button( parent, SWT.CHECK );
+        FormDataFactory.on( check ).fill().noRight();
+        check.setToolTipText( "Set this field or leave it unchanged" );
+        check.setSelection( true );
+        check.addSelectionListener( UIUtils.selectionListener( ev -> {
+            combo.getCombo().setVisible( check.getSelection() );
+            if (check.getSelection()) {
+                supply();
+            }
+            else {
+                site.setFieldValue( null );
+            }
+        }));
         
         combo = new ComboViewer( parent, SWT.READ_ONLY );
+        FormDataFactory.on( combo.getCombo() ).fill().left( check );
         combo.getCombo().setFont( combo.getCombo().getParent().getFont() );
         combo.getCombo().setVisibleItemCount( 8 );
         combo.setLabelProvider( new LabelProvider() {
@@ -84,27 +107,34 @@ public class LayerRasterSupplier
             }
         });
         combo.setContentProvider( ArrayContentProvider.getInstance() );
+        combo.setComparator( new ViewerComparator() {
+            @Override
+            public int compare( Viewer viewer, Object elm1, Object elm2 ) {
+                return ((ILayer)elm2).orderKey.get().compareTo( ((ILayer)elm1).orderKey.get() );
+//                return ((ILayer)elm1).label.get().compareToIgnoreCase( ((ILayer)elm2).label.get() );
+            }
+        });
         combo.setInput( layers );
         combo.addSelectionChangedListener( ev -> {
-            try {
-                supply();
-            }
-            catch (Exception e) {
-                StatusDispatcher.handleError( "Raster input was not properly set.", e );
-            }
+            supply();
         });
         combo.setSelection( new StructuredSelection( site.layer.orElse( layers.get( 0 ) ) ) );
         //combo.getCombo().forceFocus();
     }
 
 
-    public void supply() throws Exception {
-        ILayer layer = SelectionAdapter.on( combo.getSelection() ).first( ILayer.class ).get();
-        
-        // block UIThread until field is set
-        RasterLayer rl = RasterLayer.of( layer ).get().get();
+    public void supply() {
+        try {
+            ILayer layer = SelectionAdapter.on( combo.getSelection() ).first( ILayer.class ).get();
 
-        site.setFieldValue( rl.gridCoverage() );
+            // block UIThread until field is set
+            RasterLayer rl = RasterLayer.of( layer ).get().get();
+
+            site.setFieldValue( rl.gridCoverage() );
+        }
+        catch (Exception e) {
+            StatusDispatcher.handleError( "Raster input was not properly set.", e );
+        }
     }
 
 }
