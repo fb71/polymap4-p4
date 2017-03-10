@@ -80,8 +80,11 @@ public class ModuleProcessPanel
     static {
         FieldIO.ALL.add( LayerRasterSupplier.class );
         FieldIO.ALL.add( LayerRasterConsumer.class );
+        FieldIO.ALL.add( 0, CoordinateSupplier.class );  // higher prio than Number
     }
 
+    // instance *******************************************
+    
     /** Inbound: */
     @Scope( P4Plugin.Scope )
     private Context<ILayer>         layer;
