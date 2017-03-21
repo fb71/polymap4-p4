@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -70,7 +71,9 @@ public class LayerRasterSupplier
     
     @Override
     public boolean init( @SuppressWarnings( "hiding" ) FieldViewerSite site ) {
-        return super.init( site ) && site.fieldInfo.get().type.get().isAssignableFrom( GridCoverage2D.class );
+        return super.init( site ) && (
+                site.fieldInfo.get().type.get().isAssignableFrom( GridCoverage2D.class ) ||
+                site.fieldInfo.get().type.get().isAssignableFrom( GridCoverage2DReader.class ) );
     }
 
     
@@ -130,7 +133,16 @@ public class LayerRasterSupplier
             // block UIThread until field is set
             RasterLayer rl = RasterLayer.of( layer ).get().get();
 
-            site.setFieldValue( rl.gridCoverage() );
+            Class<?> fieldType = site.fieldInfo.get().type.get();
+            if (fieldType.isAssignableFrom( GridCoverage2D.class )) {
+                site.setFieldValue( rl.gridCoverage() );                
+            }
+            else if (fieldType.isAssignableFrom( GridCoverage2DReader.class )) {
+                site.setFieldValue( rl.gridCoverageReader() );                
+            }
+            else {
+                throw new RuntimeException( "Unknown field type: fieldType" );
+            }
         }
         catch (Exception e) {
             StatusDispatcher.handleError( "Raster input was not properly set.", e );
