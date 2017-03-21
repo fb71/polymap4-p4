@@ -81,6 +81,7 @@ public class ModuleProcessPanel
         FieldIO.ALL.add( LayerRasterSupplier.class );
         FieldIO.ALL.add( LayerRasterConsumer.class );
         FieldIO.ALL.add( 0, CoordinateSupplier.class );  // higher prio than Number
+        FieldIO.ALL.add( BoundingBoxSupplier.class );
     }
 
     // instance *******************************************

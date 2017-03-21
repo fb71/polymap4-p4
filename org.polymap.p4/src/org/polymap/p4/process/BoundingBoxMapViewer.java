@@ -14,13 +14,11 @@
  */
 package org.polymap.p4.process;
 
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.json.JSONArray;
-import org.json.JSONObject;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import com.vividsolutions.jts.geom.Coordinate;
 
 import org.eclipse.swt.widgets.Composite;
 
@@ -32,15 +30,19 @@ import org.polymap.rap.openlayers.base.OlMap.Event;
  *
  * @author Falko Bräutigam
  */
-public abstract class ClickMapViewer
+public abstract class BoundingBoxMapViewer
         extends BaseMapViewer {
 
-    private static final Log log = LogFactory.getLog( ClickMapViewer.class );
-
-
-    public ClickMapViewer( Composite parent ) {
+    private static final Log log = LogFactory.getLog( BoundingBoxMapViewer.class );
+    
+    public BoundingBoxMapViewer( Composite parent, ReferencedEnvelope bounds ) {
         super( parent );
 
+        if (bounds != null) {
+            parent.getDisplay().timerExec( 750, () -> {
+                mapExtent.set( bounds );
+            });
+        }
         getMap().addEventListener( Event.click, this );
     }
 
@@ -48,17 +50,17 @@ public abstract class ClickMapViewer
     @Override
     public void handleEvent( OlEvent ev ) {
         log.info( "event: " + ev.properties() );
-        JSONObject feature = ev.properties().optJSONObject( "feature" );
-        if (feature != null) {
-            JSONArray coord = feature.getJSONArray( "coordinate" );
-            double x = coord.getDouble( 0 );
-            double y = coord.getDouble( 1 );
-
-            onClick( new Coordinate( x, y ) );
+        JSONArray extent = ev.properties().optJSONArray( "extent" );
+        if (extent != null) {
+            ReferencedEnvelope bounds = new ReferencedEnvelope( 
+                    extent.getDouble( 0 ), extent.getDouble( 2 ), 
+                    extent.getDouble( 1 ), extent.getDouble( 3 ),
+                    maxExtent.get().getCoordinateReferenceSystem() );
+            onBoundingBox( bounds );
         }
     }
-    
 
-    protected abstract void onClick( Coordinate coordinate );
+    
+    protected abstract void onBoundingBox( ReferencedEnvelope bounds );
     
 }
