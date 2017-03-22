@@ -82,7 +82,7 @@ public class ProcessDashlet
 
     private MdListViewer            list;
 
-    private ActionText searchText;
+    private ActionText              searchText;
     
     
     public ProcessDashlet( PanelSite panelSite ) {
