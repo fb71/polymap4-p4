@@ -19,7 +19,10 @@ import java.util.Optional;
 
 import java.text.NumberFormat;
 
+import org.geotools.geometry.jts.JTS;
 import org.jgrasstools.gears.libs.modules.JGTConstants;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.MathTransform;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +35,7 @@ import org.eclipse.swt.widgets.Composite;
 
 import org.polymap.core.data.process.ui.FieldViewerSite;
 import org.polymap.core.data.process.ui.InputFieldSupplier;
+import org.polymap.core.data.util.Geometries;
 import org.polymap.core.runtime.Polymap;
 import org.polymap.core.runtime.event.EventHandler;
 import org.polymap.core.runtime.event.EventManager;
@@ -40,6 +44,8 @@ import org.polymap.core.ui.FormLayoutFactory;
 import org.polymap.core.ui.UIUtils;
 
 import org.polymap.rhei.batik.toolkit.SimpleDialog;
+
+import org.polymap.p4.layer.RasterLayer;
 
 import oms3.annotations.UI;
 
@@ -117,10 +123,22 @@ public class CoordinateSupplier
             ClickMapViewer mapViewer = new ClickMapViewer( parent ) {
                 @Override
                 protected void onClick( Coordinate coordinate ) {
-                    CoordinateSupplier.this.onClick( coordinate );
-                    dialog.close();
-                    
-                    EventManager.instance().publish( new OrdinateSupplierEvent( this, coordinate ) );
+                    try {
+                        CoordinateReferenceSystem layerCrs = RasterLayer.of( site.layer.get() ).get().get()
+                                .gridCoverage().getCoordinateReferenceSystem();
+                        
+                        MathTransform transform = Geometries.transform( 
+                                maxExtent.get().getCoordinateReferenceSystem(),
+                                layerCrs );
+                        coordinate = JTS.transform( coordinate, null, transform );
+
+                        CoordinateSupplier.this.onClick( coordinate );
+                        dialog.close();
+                        
+                        EventManager.instance().publish( new OrdinateSupplierEvent( this, coordinate ) );
+                    }
+                    catch (Exception e) {
+                    }
                 }
             };
             FormDataFactory.on( mapViewer.getControl() ).fill().width( 450 ).height( 400 );

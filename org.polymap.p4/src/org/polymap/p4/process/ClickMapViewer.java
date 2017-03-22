@@ -50,11 +50,11 @@ public abstract class ClickMapViewer
         log.info( "event: " + ev.properties() );
         JSONObject feature = ev.properties().optJSONObject( "feature" );
         if (feature != null) {
-            JSONArray coord = feature.getJSONArray( "coordinate" );
-            double x = coord.getDouble( 0 );
-            double y = coord.getDouble( 1 );
-
-            onClick( new Coordinate( x, y ) );
+            JSONArray json = feature.getJSONArray( "coordinate" );
+            double x = json.getDouble( 0 );
+            double y = json.getDouble( 1 );
+            Coordinate coord = new Coordinate( x, y );
+            onClick( coord );
         }
     }
     
