@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import com.google.common.base.Throwables;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 
 import org.polymap.core.catalog.IMetadata;
 import org.polymap.core.catalog.IMetadataCatalog;
@@ -225,7 +226,7 @@ public class AllResolver
     @Override
     public CompletableFuture<IResolvableInfo> resolve( IMetadata metadata ) {
         return resolved.computeIfAbsent( metadata, key -> {
-            return doResolve( metadata, null );
+            return doResolve( metadata, new NullProgressMonitor() );
         });
     }
 
