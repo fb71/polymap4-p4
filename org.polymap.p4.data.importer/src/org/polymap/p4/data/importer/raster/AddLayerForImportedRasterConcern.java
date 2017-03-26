@@ -48,6 +48,7 @@ import org.polymap.core.project.IMap;
 import org.polymap.core.runtime.UIThreadExecutor;
 import org.polymap.core.style.DefaultStyle;
 import org.polymap.core.style.model.FeatureStyle;
+import org.polymap.core.style.ui.raster.PredefinedColorMap;
 import org.polymap.core.ui.ColumnDataFactory;
 import org.polymap.core.ui.ColumnLayoutFactory;
 import org.polymap.core.ui.UIUtils;
@@ -167,10 +168,9 @@ public class AddLayerForImportedRasterConcern
 
         protected void createLayer( GridCoverage2D grid, IResourceInfo selected ) {
             // create default style
-            // XXX 86: [Style] Default style (http://github.com/Polymap4/polymap4-p4/issues/issue/86
-            // XXX this isn't a good place (see also NewLayerContribution)
+            // use ELEVATION
             FeatureStyle featureStyle = P4Plugin.styleRepo().newFeatureStyle();
-            DefaultStyle.fillGrayscaleStyle( featureStyle, grid );
+            DefaultStyle.fillColorMapStyle( featureStyle, grid, PredefinedColorMap.ELEVATION );
 
             NewLayerOperation op = new NewLayerOperation()
                     .label.put( input.getText() )

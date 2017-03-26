@@ -119,7 +119,7 @@ public class NewLayerContribution
             // raster
             else if (service instanceof GridCoverage2DReader) {
                 GridCoverage2D grid = ((GridCoverage2DReader)service).read( res.getName(), null );
-                DefaultStyle.fillGrayscaleStyle( featureStyle, grid );
+                DefaultStyle.create( featureStyle, grid );
             }            
         }
         catch (Exception e) {

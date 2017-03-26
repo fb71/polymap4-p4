@@ -19,6 +19,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.polymap.core.style.DefaultStyle;
 import org.polymap.core.style.model.StylePropertyValue;
 import org.polymap.core.style.ui.StylePropertyFieldSite;
+import org.polymap.core.style.ui.raster.PredefinedColorMap;
 
 import org.polymap.rhei.batik.toolkit.ActionItem;
 import org.polymap.rhei.batik.toolkit.ItemContainer;
@@ -106,7 +107,7 @@ public abstract class RasterStyleEditor
             //icon.set( P4Plugin.images().svgImage( "grid2.svg", P4Plugin.TOOLBAR_ICON_CONFIG ) );
             tooltip.set( "Add a new ColorMap style" );
             action.set( ev -> {
-                DefaultStyle.fillColorMapStyle( featureStyle, editorInput.gridCoverage.get() );
+                DefaultStyle.fillColorMapStyle( featureStyle, editorInput.gridCoverage.get(), PredefinedColorMap.RAINBOW );
                 list.refresh( true );
             });
         }

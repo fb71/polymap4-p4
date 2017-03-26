@@ -211,7 +211,7 @@ public class LayerRasterConsumer
         GridCoverage2D grid = reader.read( res.getName(), null );
         
         FeatureStyle featureStyle = P4Plugin.styleRepo().newFeatureStyle();
-        DefaultStyle.fillGrayscaleStyle( featureStyle, grid );
+        DefaultStyle.create( featureStyle, grid );
         monitor.worked( 1 );
 
         BatikApplication.instance().getContext().propagate( this );
