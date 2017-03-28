@@ -288,20 +288,22 @@ public class ModuleProcessPanel
 
         AtomicBoolean isFirst = new AtomicBoolean( true );
         for (FieldInfo fieldInfo : moduleInfo.get().outputFields()) {
-            // separator
-            if (!isFirst.getAndSet( false )) {
-                Label sep = new Label( outputSection.getBody(), SWT.SEPARATOR|SWT.HORIZONTAL );
-                UIUtils.setVariant( sep, DefaultToolkit.CSS_SECTION_SEPARATOR );  // XXX
+            if (fieldInfo.description.get().isPresent()) {
+                // separator
+                if (!isFirst.getAndSet( false )) {
+                    Label sep = new Label( outputSection.getBody(), SWT.SEPARATOR|SWT.HORIZONTAL );
+                    UIUtils.setVariant( sep, DefaultToolkit.CSS_SECTION_SEPARATOR );  // XXX
+                }
+                // field
+                FieldViewer fieldViewer = new FieldViewer( new FieldViewerSite()
+                        .moduleInfo.put( moduleInfo.get() )
+                        .module.put( module )
+                        .fieldInfo.put( fieldInfo )
+                        .layer.put( layer.get() ) );
+                fieldViewer.createContents( outputSection.getBody() )
+                        .setLayoutData( ColumnDataFactory.defaults().widthHint( 300 ).create() );
+                inputFields.add( fieldViewer );
             }
-            // field
-            FieldViewer fieldViewer = new FieldViewer( new FieldViewerSite()
-                    .moduleInfo.put( moduleInfo.get() )
-                    .module.put( module )
-                    .fieldInfo.put( fieldInfo )
-                    .layer.put( layer.get() ) );
-            fieldViewer.createContents( outputSection.getBody() )
-                    .setLayoutData( ColumnDataFactory.defaults().widthHint( 300 ).create() );
-            inputFields.add( fieldViewer );
         }
     }
     
