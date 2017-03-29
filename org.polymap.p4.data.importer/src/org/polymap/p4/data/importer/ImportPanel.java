@@ -352,7 +352,7 @@ public class ImportPanel
     public void uploadStarted( ClientFile clientFile, InputStream in ) throws Exception {
         log.info( clientFile.getName() + " - " + clientFile.getType() + " - " + clientFile.getSize() );
 
-        uploadProgress( resultSection.getBody(), "Uploading ..." );
+        uploadProgress( resultSection.getBody(), "Uploading..." );
         
         // upload file
         assert clientFile.getName() != null : "Null client file name is not supported yet.";
@@ -367,21 +367,21 @@ public class ImportPanel
                 out.write( buf, 0, c );
                 count.addAndGet( c );
                 
-                if (timer.elapsedTime() > 2000) {
+                if (timer.elapsedTime() > 1000) {
                     Composite parent = resultSection.getBody();
                     if (parent.isDisposed()) {
                         break;  // stop uploading
                     }
                     else {
-                        uploadProgress( resultSection.getBody(), "Uploading ..." + byteCountToDisplaySize( count.get() ) );
+                        uploadProgress( resultSection.getBody(), "Uploading... " + byteCountToDisplaySize( count.get() ) );
                         timer.start();
                     }
                 }
             }
-            uploadProgress( resultSection.getBody(), "Upload ...complete." );
+            uploadProgress( resultSection.getBody(), "Upload... complete." );
         }
         catch (Exception e) {
-            uploadProgress( resultSection.getBody(), "Upload ...failed." );
+            uploadProgress( resultSection.getBody(), "Upload... failed." );
             async( () -> site().toolkit().createSnackbar( Appearance.FadeIn, "Unable to upload file." ) );
             return;
         }
@@ -396,10 +396,11 @@ public class ImportPanel
     private void uploadProgress( Composite parent, String msg ) {
         parent.getDisplay().asyncExec( () -> {
             if (!parent.isDisposed()) {
-                parent.setLayout( new FillLayout( SWT.VERTICAL ) );
                 UIUtils.disposeChildren( parent );
+                parent.setLayout( new FillLayout( SWT.VERTICAL ) );
                 tk().createFlowText( parent, msg );
                 parent.layout();
+                log.info( "uploadProgress(): " + msg );
             }
         });        
     }
