@@ -187,8 +187,8 @@ public class ImportPanel
             upload.setImage( ImporterPlugin.images().svgImage( "upload.svg", SvgImageRegistryHelper.ACTION24 ) );
             upload.setText( i18n.get( "upload" ) );
             upload.setToolTipText( i18n.get( "uploadTooltip" ) );
-            upload.setHandler( this );
             upload.moveAbove( null );
+            upload.setHandler( this );
 
             DropTarget labelDropTarget = new DropTarget( upload, DND.DROP_MOVE );
             labelDropTarget.setTransfer( new Transfer[] { ClientFileTransfer.getInstance() } );
@@ -394,15 +394,17 @@ public class ImportPanel
 
     
     private void uploadProgress( Composite parent, String msg ) {
-        parent.getDisplay().asyncExec( () -> {
-            if (!parent.isDisposed()) {
-                UIUtils.disposeChildren( parent );
-                parent.setLayout( new FillLayout( SWT.VERTICAL ) );
-                tk().createFlowText( parent, msg );
-                parent.layout();
-                log.info( "uploadProgress(): " + msg );
-            }
-        });        
+        if (!parent.isDisposed()) {
+            parent.getDisplay().asyncExec( () -> {
+                if (!parent.isDisposed()) {
+                    UIUtils.disposeChildren( parent );
+                    parent.setLayout( new FillLayout( SWT.VERTICAL ) );
+                    tk().createFlowText( parent, msg );
+                    parent.layout();
+                    log.info( "uploadProgress(): " + msg );
+                }
+            });
+        }        
     }
     
     
