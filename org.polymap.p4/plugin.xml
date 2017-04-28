@@ -86,6 +86,11 @@
             class="org.polymap.p4.process.ModuleProcessPanel"
             id="org.polymap.p4.ProcessModulePanel">
       </panel>
+      <panel
+            class="org.polymap.p4.catalog.CatalogPanel"
+            id="org.polymap.p4.catalog.CatalogPanel"
+            stackPriority="95">
+      </panel>
    </extension>
    <!--extension
          point="org.polymap.service.fs.contentProviders">

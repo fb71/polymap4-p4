@@ -28,6 +28,7 @@ import org.eclipse.jface.viewers.ViewerCell;
 import org.polymap.core.catalog.IMetadata;
 import org.polymap.core.catalog.resolve.IResourceInfo;
 import org.polymap.core.catalog.ui.MetadataContentProvider;
+import org.polymap.core.catalog.ui.MetadataDescriptionProvider;
 import org.polymap.core.catalog.ui.MetadataLabelProvider;
 import org.polymap.core.project.IMap;
 import org.polymap.core.ui.FormDataFactory;
@@ -62,15 +63,17 @@ public class CatalogPanel
         extends P4Panel 
         implements IOpenListener {
 
-    private static Log log = LogFactory.getLog( CatalogPanel.class );
+    private static final Log log = LogFactory.getLog( CatalogPanel.class );
 
     public static final PanelIdentifier ID = PanelIdentifier.parse( "catalog" );
 
     private MdListViewer                viewer;
 
+    /** Outbound: */
     @Scope( P4Plugin.Scope )
     private Context<IResourceInfo>      selectedResource;
     
+    /** Outbound: */
     @Scope( P4Plugin.Scope )
     private Context<IMetadata>          selectedMetadata;
     
@@ -91,7 +94,7 @@ public class CatalogPanel
                 .map( parent -> {
                     site().title.set( "" );
                     site().tooltip.set( "Catalogs of data sources" );
-                    site().icon.set( P4Plugin.images().svgImage( "database.svg", P4Plugin.HEADER_ICON_CONFIG ) );
+                    site().icon.set( P4Plugin.images().svgImage( "book-open-variant.svg", P4Plugin.HEADER_ICON_CONFIG ) );
                     return true;
                 })
                 .orElse( false );
@@ -110,7 +113,7 @@ public class CatalogPanel
         viewer.setContentProvider( new MetadataContentProvider( P4Plugin.allResolver() ) );
         viewer.firstLineLabelProvider.set( new TreeExpandStateDecorator(
                 viewer, new MetadataLabelProvider() ) );
-        //viewer.secondLineLabelProvider.set( new MetadataDescriptionProvider() );
+        viewer.secondLineLabelProvider.set( new MetadataDescriptionProvider() );
         viewer.iconProvider.set( new MetadataIconProvider() );
         viewer.firstSecondaryActionProvider.set( new CreateLayerAction() );
         viewer.addOpenListener( this );
@@ -126,7 +129,7 @@ public class CatalogPanel
         new ClearTextAction( search );
         
         // layout
-        search.getControl().setLayoutData( FormDataFactory.filled().noBottom().create() );
+        search.getControl().setLayoutData( FormDataFactory.filled().top( 0, 10 ).noBottom().create() );
         // fill the entiry space as items are expandable; scrollbar would not adopted otherwise
         viewer.getTree().setLayoutData( FormDataFactory.filled().top( search.getControl() ).create() );
     }
@@ -157,6 +160,7 @@ public class CatalogPanel
                 selectedResource.set( (IResourceInfo)elm );
                 getContext().openPanel( getSite().getPath(), ResourceInfoPanel.ID );                        
             }
+            viewer.collapseAllNotInPathOf( elm );
             viewer.toggleItemExpand( elm );
         });
     }

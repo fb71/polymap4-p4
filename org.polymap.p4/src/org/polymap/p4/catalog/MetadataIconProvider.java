@@ -24,6 +24,7 @@ import org.polymap.core.catalog.IMetadataCatalog;
 import org.polymap.core.catalog.local.LocalMetadata;
 import org.polymap.core.catalog.resolve.IResourceInfo;
 import org.polymap.core.catalog.ui.MetadataContentProvider;
+
 import org.polymap.rhei.batik.BatikPlugin;
 import org.polymap.rhei.batik.app.SvgImageRegistryHelper;
 
@@ -34,7 +35,7 @@ import org.polymap.p4.P4Plugin;
  *
  * @author Falko Bräutigam
  */
-class MetadataIconProvider
+public class MetadataIconProvider
         extends CellLabelProvider {
 
     @Override

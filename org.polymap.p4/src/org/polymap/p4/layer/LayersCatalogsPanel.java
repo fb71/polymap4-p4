@@ -33,8 +33,10 @@ import org.eclipse.jface.viewers.TreePath;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 
+import org.polymap.core.catalog.IMetadata;
 import org.polymap.core.catalog.resolve.IResourceInfo;
 import org.polymap.core.catalog.ui.MetadataContentProvider;
+import org.polymap.core.catalog.ui.MetadataLabelProvider;
 import org.polymap.core.project.ILayer;
 import org.polymap.core.runtime.UIJob;
 import org.polymap.core.runtime.UIThreadExecutor;
@@ -44,16 +46,21 @@ import org.polymap.core.ui.FormLayoutFactory;
 import org.polymap.core.ui.SelectionAdapter;
 import org.polymap.core.ui.UIUtils;
 
+import org.polymap.rhei.batik.Context;
 import org.polymap.rhei.batik.PanelIdentifier;
+import org.polymap.rhei.batik.Scope;
 import org.polymap.rhei.batik.help.HelpAwarePanel;
 import org.polymap.rhei.batik.toolkit.DefaultToolkit;
 import org.polymap.rhei.batik.toolkit.md.MdListViewer;
+import org.polymap.rhei.batik.toolkit.md.TreeExpandStateDecorator;
 
 import org.polymap.p4.Messages;
 import org.polymap.p4.P4Panel;
 import org.polymap.p4.P4Plugin;
 import org.polymap.p4.catalog.AllResolver;
-import org.polymap.p4.catalog.CatalogPanel;
+import org.polymap.p4.catalog.MetadataIconProvider;
+import org.polymap.p4.catalog.MetadataInfoPanel;
+import org.polymap.p4.catalog.ResourceInfoPanel;
 import org.polymap.p4.map.ProjectMapPanel;
 
 /**
@@ -73,15 +80,23 @@ public class LayersCatalogsPanel
 
     private static final String         MEMENTO_WEIGHTS = "sashWeights";
     
+    /** Outbound: */
+    @Scope( P4Plugin.Scope )
+    private Context<IResourceInfo> selectedResource;
+    
+    /** Outbound: */
+    @Scope( P4Plugin.Scope )
+    private Context<IMetadata>  selectedMetadata;
+
     private SashForm            sashForm;
 
     private Composite           layersParent;
 
     private Composite           catalogsParent;
 
-    private CatalogPanel        catalogsPanel;
-
     private LayersPanel         layersPanel;
+
+    private MdListViewer        catalogsViewer;
 
     
     @Override
@@ -162,19 +177,32 @@ public class LayersCatalogsPanel
         UIUtils.setVariant( sectionTitle, DefaultToolkit.CSS_SECTION_TITLE  );
         FormDataFactory.on( sectionTitle ).fill().noBottom();
 
-        // panel/viewer
-        Composite panelParent = tk().createComposite( catalogsParent ); //, SWT.V_SCROLL );
-        FormDataFactory.on( panelParent ).fill().top( sectionTitle );
-        catalogsPanel = getContext().propagate( new CatalogPanel() );
-        catalogsPanel.setSite( site(), getContext() );  // ???
-        catalogsPanel.init();
-        catalogsPanel.createContents( panelParent ); //(Composite)panelParent.getContent() );
-//        panelParent.layout();
-        
-        catalogsPanel.getViewer().addOpenListener( ev -> {
+        // tree/list viewer
+        catalogsViewer = tk().createListViewer( catalogsParent, SWT.VIRTUAL, SWT.FULL_SELECTION, SWT.SINGLE );
+        FormDataFactory.on( catalogsViewer.getTree() ).fill().top( sectionTitle );
+        catalogsViewer.linesVisible.set( true );
+        catalogsViewer.setContentProvider( new MetadataContentProvider( P4Plugin.allResolver() ) );
+        catalogsViewer.firstLineLabelProvider.set( new TreeExpandStateDecorator(
+                catalogsViewer, new MetadataLabelProvider() ) );
+        catalogsViewer.iconProvider.set( new MetadataIconProvider() );
+       // catalogsViewer.firstSecondaryActionProvider.set( new CreateLayerAction() );
+        catalogsViewer.setInput( P4Plugin.catalogs() );
+
+        catalogsViewer.addOpenListener( ev -> {
             SelectionAdapter.on( ev.getSelection() ).forEach( elm -> {
+                catalogsViewer.collapseAllNotInPathOf( elm );
+                catalogsViewer.toggleItemExpand( elm );
+
                 if (elm instanceof IResourceInfo) {
                     onResourceOpen( (IResourceInfo)elm );
+                }
+                if (elm instanceof IMetadata) {
+                    selectedMetadata.set( (IMetadata)elm );
+                    getContext().openPanel( getSite().getPath(), MetadataInfoPanel.ID );                        
+                }
+                else if (elm instanceof IResourceInfo) {
+                    selectedResource.set( (IResourceInfo)elm );
+                    getContext().openPanel( getSite().getPath(), ResourceInfoPanel.ID );                        
                 }
             });
         });
@@ -188,13 +216,12 @@ public class LayersCatalogsPanel
                 IResourceInfo resInfo = AllResolver.instance().resInfo( layer, monitor )
                         .orElseThrow( () -> new IllegalStateException( "No resource found for layer: " + layer ) );
 
-                MdListViewer viewer = catalogsPanel.getViewer();
-                MetadataContentProvider provider = (MetadataContentProvider)viewer.getContentProvider();
+                MetadataContentProvider provider = (MetadataContentProvider)catalogsViewer.getContentProvider();
                 TreePath treePath = provider.treePathOf( resInfo );
 
                 UIThreadExecutor.async( () -> {
-                    viewer.setSelection( new StructuredSelection() );
-                    viewer.collapseAll();
+                    catalogsViewer.setSelection( new StructuredSelection() );
+                    catalogsViewer.collapseAll();
                 });
                 
                 Thread.sleep( 2000 );  // let the child panel open up
@@ -202,7 +229,7 @@ public class LayersCatalogsPanel
                     Object segment = treePath.getSegment( i );
                     UIThreadExecutor.async( () -> {
                         log.debug( "expanding: " + segment.getClass().getSimpleName() );
-                        viewer.expandToLevel( segment, 1 );
+                        catalogsViewer.expandToLevel( segment, 1 );
                     });
                     log.debug( "waiting for: " + segment.getClass().getSimpleName() );
                     Thread.sleep( 1000 );  // FIXME
@@ -212,9 +239,9 @@ public class LayersCatalogsPanel
 //                    }
                 }
                 UIThreadExecutor.async( () -> {
-                    viewer.setSelection( new StructuredSelection( resInfo ), true );
-                    viewer.reveal( resInfo );
-                    viewer.getTree().showSelection();
+                    catalogsViewer.setSelection( new StructuredSelection( resInfo ), true );
+                    catalogsViewer.reveal( resInfo );
+                    catalogsViewer.getTree().showSelection();
                 });
             }
         }.scheduleWithUIUpdate();

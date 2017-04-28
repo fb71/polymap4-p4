@@ -81,7 +81,6 @@ import org.polymap.rhei.batik.toolkit.md.TreeExpandStateDecorator;
 
 import org.polymap.p4.P4Panel;
 import org.polymap.p4.P4Plugin;
-import org.polymap.p4.catalog.CatalogPanel;
 import org.polymap.p4.data.importer.ImportsLabelProvider.Type;
 import org.polymap.p4.data.importer.features.ImportFeaturesOperation;
 import org.polymap.p4.layer.LayersCatalogsPanel;
@@ -127,8 +126,7 @@ public class ImportPanel
     @Override
     public boolean wantsToBeShown() {
         return parentPanel()
-                .filter( parent -> parent instanceof CatalogPanel 
-                        || parent instanceof LayersPanel
+                .filter( parent -> parent instanceof LayersPanel
                         || parent instanceof LayersCatalogsPanel
                         || parent instanceof ProjectMapPanel )
                 .map( parent -> {
