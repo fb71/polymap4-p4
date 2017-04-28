@@ -35,6 +35,7 @@ import org.polymap.core.ui.FormDataFactory;
 import org.polymap.core.ui.FormLayoutFactory;
 import org.polymap.core.ui.SelectionAdapter;
 import org.polymap.core.ui.StatusDispatcher;
+import org.polymap.core.ui.UIUtils;
 
 import org.polymap.rhei.batik.Context;
 import org.polymap.rhei.batik.PanelIdentifier;
@@ -129,7 +130,8 @@ public class CatalogPanel
         new ClearTextAction( search );
         
         // layout
-        search.getControl().setLayoutData( FormDataFactory.filled().top( 0, 10 ).noBottom().create() );
+        search.getText().setFont( UIUtils.bold( search.getText().getFont() ) );
+        search.getControl().setLayoutData( FormDataFactory.filled().top( 0, 10 ).noBottom().height( 33 ).create() );
         // fill the entiry space as items are expandable; scrollbar would not adopted otherwise
         viewer.getTree().setLayoutData( FormDataFactory.filled().top( search.getControl() ).create() );
     }
