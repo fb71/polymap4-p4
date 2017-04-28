@@ -210,6 +210,7 @@ public class ImportPanel
                     createResultViewer( (ImporterContext)elm );
                     updateFab( (ImporterContext)elm );
 
+                    importsList.collapseAllNotInPathOf( elm );
                     importsList.expandToLevel( elm, 1 );
                 }
                 //
