@@ -14,8 +14,9 @@
  */
 package org.polymap.p4.catalog;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -145,7 +146,7 @@ public class CatalogPanel
             @Override
             protected String[] proposals( String text, int maxResults, IProgressMonitor monitor ) {
                 monitor.beginTask( "Proposals", catalogs.size()*10 );
-                List<String> result = new ArrayList();
+                Set<String> result = new TreeSet();
                 for (IMetadataCatalog catalog : catalogs) {
                     try {
                         SubMonitor submon = SubMonitor.on( monitor, 10 );
