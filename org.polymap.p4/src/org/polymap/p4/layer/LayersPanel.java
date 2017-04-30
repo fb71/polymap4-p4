@@ -370,12 +370,23 @@ public class LayersPanel
                 // ommit non-feature layers
                 cell.setImage( null );
                 
-                ILayer layer = (ILayer)cell.getElement();            
-                FeatureLayer.of( layer ).thenAccept( fl -> {
-                    if (fl.isPresent()) {
-                        UIThreadExecutor.async( () -> super.update( cell ) );
-                    }
-                });
+                // sync wait for FeatureLayer
+                ILayer layer = (ILayer)cell.getElement();
+                FeatureLayer.of( layer ).get().ifPresent( fl -> LayerActiveAction.super.update( cell ) );
+
+                // async implementation; does not work because ViewerCell does not seem to expect
+                // to be called after this update() call :(
+                
+//                ViewerRow viewerRow = cell.getViewerRow();
+//                int columnIndex = cell.getColumnIndex();
+//                FeatureLayer.of( layer ).thenAccept( fl -> {
+//                    if (fl.isPresent()) {
+//                        UIThreadExecutor.async( () -> {
+//                            Image image = isSelected( layer ) ? selectedImage.get() : unselectedImage.get();
+//                            viewerRow.setImage( columnIndex, image );
+//                        });
+//                    }
+//                });
             }
             catch (Exception e) {
                 log.warn( "", e );
