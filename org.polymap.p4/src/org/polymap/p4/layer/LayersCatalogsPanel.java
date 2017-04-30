@@ -190,6 +190,7 @@ public class LayersCatalogsPanel
 
         catalogsViewer.addOpenListener( ev -> {
             SelectionAdapter.on( ev.getSelection() ).forEach( elm -> {
+                //catalogsViewer.setSelection( new StructuredSelection() );
                 catalogsViewer.collapseAllNotInPathOf( elm );
                 catalogsViewer.toggleItemExpand( elm );
 

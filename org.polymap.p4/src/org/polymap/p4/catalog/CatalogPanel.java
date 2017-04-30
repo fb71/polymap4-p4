@@ -14,8 +14,14 @@
  */
 package org.polymap.p4.catalog;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.Iterables;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
@@ -25,12 +31,16 @@ import org.eclipse.jface.viewers.OpenEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.ViewerCell;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+
 import org.polymap.core.catalog.IMetadata;
+import org.polymap.core.catalog.IMetadataCatalog;
 import org.polymap.core.catalog.resolve.IResourceInfo;
 import org.polymap.core.catalog.ui.MetadataContentProvider;
 import org.polymap.core.catalog.ui.MetadataDescriptionProvider;
 import org.polymap.core.catalog.ui.MetadataLabelProvider;
 import org.polymap.core.project.IMap;
+import org.polymap.core.runtime.SubMonitor;
 import org.polymap.core.ui.FormDataFactory;
 import org.polymap.core.ui.FormLayoutFactory;
 import org.polymap.core.ui.SelectionAdapter;
@@ -46,6 +56,7 @@ import org.polymap.rhei.batik.toolkit.ClearTextAction;
 import org.polymap.rhei.batik.toolkit.Snackbar.Appearance;
 import org.polymap.rhei.batik.toolkit.TextActionItem;
 import org.polymap.rhei.batik.toolkit.TextActionItem.Type;
+import org.polymap.rhei.batik.toolkit.TextProposalDecorator;
 import org.polymap.rhei.batik.toolkit.md.ActionProvider;
 import org.polymap.rhei.batik.toolkit.md.MdListViewer;
 import org.polymap.rhei.batik.toolkit.md.TreeExpandStateDecorator;
@@ -118,7 +129,9 @@ public class CatalogPanel
         viewer.iconProvider.set( new MetadataIconProvider() );
         viewer.firstSecondaryActionProvider.set( new CreateLayerAction() );
         viewer.addOpenListener( this );
-        viewer.setInput( P4Plugin.catalogs() );
+        
+        List<IMetadataCatalog> catalogs = P4Plugin.catalogs();
+        viewer.setInput( catalogs );
 
         // search field
         ActionText search = tk().createActionText( parent, "" );
@@ -128,6 +141,24 @@ public class CatalogPanel
                 .tooltip.put( "Fulltext search. Use * as wildcard.<br/>&lt;ENTER&gt; starts the search." )
                 .icon.put( P4Plugin.images().svgImage( "magnify.svg", SvgImageRegistryHelper.DISABLED12 ) );
         new ClearTextAction( search );
+        new TextProposalDecorator( search.getText() ) {
+            @Override
+            protected String[] proposals( String text, int maxResults, IProgressMonitor monitor ) {
+                monitor.beginTask( "Proposals", catalogs.size()*10 );
+                List<String> result = new ArrayList();
+                for (IMetadataCatalog catalog : catalogs) {
+                    try {
+                        SubMonitor submon = SubMonitor.on( monitor, 10 );
+                        Iterables.addAll( result, catalog.propose( text, 10, submon ) );
+                        submon.done();
+                    }
+                    catch (Exception e) {
+                        log.warn( "", e );
+                    }
+                }
+                return FluentIterable.from( result ).limit( maxResults ).toArray( String.class );
+            }
+        };
         
         // layout
         search.getText().setFont( UIUtils.bold( search.getText().getFont() ) );
@@ -162,6 +193,7 @@ public class CatalogPanel
                 selectedResource.set( (IResourceInfo)elm );
                 getContext().openPanel( getSite().getPath(), ResourceInfoPanel.ID );                        
             }
+            //viewer.setSelection( new StructuredSelection() );
             viewer.collapseAllNotInPathOf( elm );
             viewer.toggleItemExpand( elm );
         });
