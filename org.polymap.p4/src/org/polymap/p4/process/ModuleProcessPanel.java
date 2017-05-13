@@ -31,14 +31,14 @@ import com.google.common.base.Throwables;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 
 import org.eclipse.jface.layout.RowDataFactory;
 import org.eclipse.jface.layout.RowLayoutFactory;
 
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
-import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.core.runtime.jobs.IJobChangeListener;
 import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 
 import org.polymap.core.data.process.FieldInfo;
@@ -47,8 +47,6 @@ import org.polymap.core.data.process.ui.FieldIO;
 import org.polymap.core.data.process.ui.FieldViewer;
 import org.polymap.core.data.process.ui.FieldViewerSite;
 import org.polymap.core.project.ILayer;
-import org.polymap.core.runtime.UIJob;
-import org.polymap.core.runtime.UIThreadExecutor;
 import org.polymap.core.ui.ColumnDataFactory;
 import org.polymap.core.ui.ColumnLayoutFactory;
 import org.polymap.core.ui.FormDataFactory;
@@ -56,6 +54,7 @@ import org.polymap.core.ui.FormLayoutFactory;
 import org.polymap.core.ui.UIUtils;
 
 import org.polymap.rhei.batik.Context;
+import org.polymap.rhei.batik.Mandatory;
 import org.polymap.rhei.batik.PanelIdentifier;
 import org.polymap.rhei.batik.Scope;
 import org.polymap.rhei.batik.app.SvgImageRegistryHelper;
@@ -64,9 +63,10 @@ import org.polymap.rhei.batik.toolkit.IPanelSection;
 
 import org.polymap.p4.P4Panel;
 import org.polymap.p4.P4Plugin;
+import org.polymap.p4.process.BackgroundJob.State;
 
 /**
- * Processes a given module ({@link JGTModel}). 
+ * Provides UI for a given {@link BackgroundJob}. 
  *
  * @author Falko Bräutigam
  */
@@ -87,14 +87,16 @@ public class ModuleProcessPanel
     // instance *******************************************
     
     /** Inbound: */
+    @Mandatory
     @Scope( P4Plugin.Scope )
-    private Context<ILayer>         layer;
-
-    /** Inbound: */
-    @Scope( P4Plugin.Scope )
-    private Context<ModuleInfo>     moduleInfo;
+    private Context<BackgroundJob>  bgjob;
+    
+    /** {@link BackgroundJob#moduleInfo()} of {@link #bgjob} */
+    private ModuleInfo              moduleInfo;
 
     private JGTModel                module;
+
+    private ILayer                  layer;
 
     private IPanelSection           outputSection;
 
@@ -108,29 +110,28 @@ public class ModuleProcessPanel
     
     private List<FieldViewer>       inputFields = new ArrayList();
 
-    private UIJob                   job;
-
     
     @Override
     public void init() {
         super.init();
-        module = moduleInfo.get().createInstance();
+        moduleInfo = bgjob.get().moduleInfo();
+        module = bgjob.get().module();
+        layer = bgjob.get().layer();
     }
 
     
     @Override
     public void dispose() {
-        if (job != null) {
-            job.cancelAndInterrupt();
-            job = null;
-        }
+//        if (!bgjob.get().isRunning()) {
+//            bgjob.get().dispose();
+//        }
     }
 
 
     @Override
     public void createContents( @SuppressWarnings( "hiding" ) Composite parent ) {
         this.parent = parent;
-        site().title.set( moduleInfo.get().title() );
+        site().title.set( bgjob.get().moduleInfo().title() );
         
         parent.setLayout( FormLayoutFactory.defaults().spacing( 8 ).margins( 2, 8 ).create() );
         
@@ -140,8 +141,18 @@ public class ModuleProcessPanel
         buttons = createButtonsSection();
         FormDataFactory.on( buttons ).fill().top( inputSection.getControl() ).noBottom();
 
-//        outputSection = createOutputSection();
-//        FormDataFactory.on( outputSection.getControl() ).fill().top( buttons ).noBottom();
+        if (bgjob.get().state() != State.NOT_YET_STARTED) {
+            outputSection = createOutputSection();
+            FormDataFactory.on( outputSection.getControl() ).fill().top( buttons ).noBottom();
+
+            if (bgjob.get().state() == State.RUNNING) {
+                bgjob.get().reportProgress( outputSection.getBody(), onJobChange() );
+            }
+            else {
+                fillOutputFields();
+                parent.layout( true, true );
+            }
+        }
     }
 
 
@@ -149,12 +160,12 @@ public class ModuleProcessPanel
         IPanelSection section = tk().createPanelSection( parent, "Input", SWT.BORDER );
         section.getBody().setLayout( ColumnLayoutFactory.defaults().columns( 1, 1 ).margins( 0, 8 ).spacing( 10 ).create() );
 
-        Label label = tk().createLabel( section.getBody(), moduleInfo.get().description.get().orElse( "No description." ), SWT.WRAP );
+        Label label = tk().createLabel( section.getBody(), moduleInfo.description.get().orElse( "No description." ), SWT.WRAP );
         label.setLayoutData( ColumnDataFactory.defaults().widthHint( 300 ).create() );
         label.setEnabled( false );
         
         AtomicBoolean isFirst = new AtomicBoolean( true );
-        for (FieldInfo fieldInfo : moduleInfo.get().inputFields()) {
+        for (FieldInfo fieldInfo : moduleInfo.inputFields()) {
             // skip
             if (IJGTProgressMonitor.class.isAssignableFrom( fieldInfo.type.get() )
                     || !fieldInfo.description.get().isPresent()) {
@@ -167,10 +178,10 @@ public class ModuleProcessPanel
             }
             // field
             FieldViewer fieldViewer = new FieldViewer( new FieldViewerSite()
-                    .moduleInfo.put( moduleInfo.get() )
+                    .moduleInfo.put( moduleInfo )
                     .module.put( module )
                     .fieldInfo.put( fieldInfo )
-                    .layer.put( layer.get() ) );
+                    .layer.put( layer ) );
             fieldViewer.createContents( section.getBody() )
                     .setLayoutData( ColumnDataFactory.defaults().widthHint( 300 ).create() );
             inputFields.add( fieldViewer );
@@ -193,11 +204,10 @@ public class ModuleProcessPanel
         startBtn = tk().createButton( section, "", SWT.PUSH );
         startBtn.setLayoutData( RowDataFactory.swtDefaults().hint( 150, SWT.DEFAULT ).create() );
         startBtn.addSelectionListener( UIUtils.selectionListener( ev -> {
-            if (job == null) {
+            if (bgjob.get().state() != State.RUNNING) {
                 startProcess();
             } else {
                 stopProcess();
-                //startBtn.setEnabled( false );
             }
         }));
         updateStartBtn();
@@ -206,7 +216,7 @@ public class ModuleProcessPanel
     
     
     protected void updateStartBtn() {
-        if (job != null && job.getState() != Job.NONE) {
+        if (bgjob.get().state() == State.RUNNING) {
             startBtn.setText( "STOP" );
             startBtn.setImage( P4Plugin.images().svgImage( "stop-circle-outline.svg", SvgImageRegistryHelper.WHITE24 ) );
         }
@@ -218,9 +228,8 @@ public class ModuleProcessPanel
     
     
     protected void stopProcess() {
-        if (job != null) {
-            module.pm.setCanceled( true );
-            job.cancelAndInterrupt();
+        if (bgjob.get().state() == State.RUNNING) {
+            bgjob.get().cancel();
         }
         updateStartBtn();
         UIUtils.disposeChildren( outputSection.getBody() );
@@ -231,6 +240,7 @@ public class ModuleProcessPanel
     
     
     protected void startProcess() {
+        // create/clear outputSection
         if (outputSection == null) {
             outputSection = createOutputSection();
             FormDataFactory.on( outputSection.getControl() ).fill().top( buttons ).noBottom();
@@ -239,55 +249,61 @@ public class ModuleProcessPanel
             UIUtils.disposeChildren( outputSection.getBody() );
         }
 
-        // the default Polymap executor is unbound
-       // ExecutionPlanner.defaultExecutor = Polymap.executorService();
+        // start BackgroundJob
+        bgjob.get().start();
         
-        module.pm = new ProcessProgressMonitor( outputSection.getBody() );
+        // connect monitor
+        bgjob.get().reportProgress( outputSection.getBody(), onJobChange() );
         parent.layout( true, true );
         
-        job = new UIJob( "Processing" ) {
-            @Override
-            protected void runWithException( IProgressMonitor monitor ) throws Exception {
-                moduleInfo.get().execute( module, null );
-            }
-        };
-        job.addJobChangeListenerWithContext( new JobChangeAdapter() {
-            @Override
-            public void done( IJobChangeEvent ev ) {
-                UIThreadExecutor.async( () -> {
-                    if (!outputSection.getBody().isDisposed()) {
-                        job = null;
-                        updateStartBtn();
-                        
-                        UIUtils.disposeChildren( outputSection.getBody() );
-                        if (ev.getResult().isOK()) {
-                            fillOutputFields();
-                        }
-                        else {
-                            Throwable e = ev.getResult().getException();
-                            Label msg = new Label( outputSection.getBody(), SWT.WRAP );
-                            msg.setForeground( FieldViewer.errorColor() );
-                            msg.setText( defaultString( e != null 
-                                    ? Throwables.getRootCause( e ).getMessage() 
-                                    : ev.getResult().getMessage(),
-                                    "-" ) );
-                            FormDataFactory.on( msg ).fill().width( 200 );
-                        }
-                        parent.layout( true, true );
-                    }
-                });
-            }
-        });
-        job.schedule();
         updateStartBtn();
     }
 
+    
+    protected IJobChangeListener onJobChange() {
+        Display display = startBtn.getDisplay();
+        return new JobChangeAdapter() {
+            @Override
+            public void done( IJobChangeEvent ev ) {
+                if (display.isDisposed()) {
+                    ev.getJob().removeJobChangeListener( this );
+                }
+                else {
+                    display.asyncExec( () -> {
+                        if (outputSection.getBody().isDisposed()) {
+                            ev.getJob().removeJobChangeListener( this );
+                        }
+                        else {
+                            updateStartBtn();
 
+                            UIUtils.disposeChildren( outputSection.getBody() );
+                            if (ev.getResult().isOK()) {
+                                fillOutputFields();
+                            }
+                            else {
+                                Throwable e = ev.getResult().getException();
+                                Label msg = new Label( outputSection.getBody(), SWT.WRAP );
+                                msg.setForeground( FieldViewer.errorColor() );
+                                msg.setText( defaultString( e != null 
+                                        ? Throwables.getRootCause( e ).getMessage() 
+                                                : ev.getResult().getMessage(),
+                                        "-" ) );
+                                FormDataFactory.on( msg ).fill().width( 200 );
+                            }
+                            parent.layout( true, true );
+                        }
+                    });
+                }
+            }
+        };
+    }
+
+    
     protected void fillOutputFields() {
         outputSection.getBody().setLayout( ColumnLayoutFactory.defaults().columns( 1, 1 ).margins( 0, 8 ).spacing( 10 ).create() );
 
         AtomicBoolean isFirst = new AtomicBoolean( true );
-        for (FieldInfo fieldInfo : moduleInfo.get().outputFields()) {
+        for (FieldInfo fieldInfo : moduleInfo.outputFields()) {
             if (fieldInfo.description.get().isPresent()) {
                 // separator
                 if (!isFirst.getAndSet( false )) {
@@ -296,10 +312,10 @@ public class ModuleProcessPanel
                 }
                 // field
                 FieldViewer fieldViewer = new FieldViewer( new FieldViewerSite()
-                        .moduleInfo.put( moduleInfo.get() )
+                        .moduleInfo.put( moduleInfo )
                         .module.put( module )
                         .fieldInfo.put( fieldInfo )
-                        .layer.put( layer.get() ) );
+                        .layer.put( layer ) );
                 fieldViewer.createContents( outputSection.getBody() )
                         .setLayoutData( ColumnDataFactory.defaults().widthHint( 300 ).create() );
                 inputFields.add( fieldViewer );

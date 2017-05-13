@@ -91,6 +91,11 @@
             id="org.polymap.p4.catalog.CatalogPanel"
             stackPriority="95">
       </panel>
+      <panel
+            class="org.polymap.p4.process.ProgressPanel"
+            id="org.polymap.p4.ProgressPanel"
+            stackPriority="-900">
+      </panel>
    </extension>
    <!--extension
          point="org.polymap.service.fs.contentProviders">

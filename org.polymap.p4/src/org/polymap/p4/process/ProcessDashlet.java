@@ -72,9 +72,9 @@ public class ProcessDashlet
     @Scope( P4Plugin.Scope )
     private Context<ILayer>         layer;
     
-    /** Outbound: */
+    /** Outbound: for {@link ModuleProcessPanel} */
     @Scope( P4Plugin.Scope )
-    private Context<ModuleInfo>     selected;
+    private Context<BackgroundJob>  bgjob;
     
     private PanelSite               panelSite;
 
@@ -184,7 +184,8 @@ public class ProcessDashlet
             }
         });
         list.addOpenListener( ev -> {
-            selected.set( (ModuleInfo)((IStructuredSelection)list.getSelection()).getFirstElement() );
+            ModuleInfo moduleInfo = (ModuleInfo)((IStructuredSelection)list.getSelection()).getFirstElement();
+            bgjob.set( new BackgroundJob( moduleInfo, layer.get() ) );
             BatikApplication.instance().getContext().openPanel( panelSite.path(), ModuleProcessPanel.ID );
         });
         list.setContentProvider( new ListTreeContentProvider() );
